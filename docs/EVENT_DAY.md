@@ -23,5 +23,4 @@ Undoing a mistaken check-in is admin-only: **Attendees → ↶**.
 
 ## After the event
 - [ ] **Attendees → Export CSV** to download the final attendance.
-- [ ] Set `minInstances: 0` in `apphosting.yaml`.
-- [ ] Delete the attendee data once you no longer need it (**Admin → Reset all data**, which requires `ALLOW_DEMO_DATA=true`), or by deleting the Firestore collections.
+- [ ] Delete the attendee data once you no longer need it (**Admin → Reset all data**, which requires `ALLOW_DEMO_DATA=true`), or by deleting the `checkin_docs` table in Supabase.

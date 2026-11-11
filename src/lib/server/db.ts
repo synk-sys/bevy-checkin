@@ -1,12 +1,12 @@
 /**
- * Minimal document-database abstraction with Firestore semantics.
+ * Minimal document-database abstraction: documents addressed as "collection/id".
  *
- * The mosaic service is written once against this interface. In production
- * it is backed by Firestore (firestore-db.ts); for the local prototype, demo
- * rehearsals and tests it is backed by MemoryDb, which implements genuine
+ * The check-in service is written once against this interface. In production
+ * it is backed by Supabase Postgres (postgres-db.ts); for the local prototype,
+ * demo rehearsals and tests it is backed by MemoryDb, which implements genuine
  * optimistic-concurrency transactions (read versions are validated at commit
  * and the transaction body is retried on conflict) so concurrency tests
- * exercise the same allocation code path that runs against Firestore.
+ * exercise the same check-in code path that runs against Postgres.
  */
 export type Data = Record<string, unknown>;
 
@@ -30,14 +30,14 @@ export interface WriteOp {
 }
 
 export interface DocDb {
-  readonly kind: "memory" | "firestore";
+  readonly kind: "memory" | "postgres";
   runTransaction<T>(fn: (tx: Tx) => Promise<T>): Promise<T>;
   get(path: string): Promise<Data | null>;
   set(path: string, data: Data, opts?: { merge?: boolean }): Promise<void>;
   /** Atomic numeric increments (merged), creating the document if needed. Dotted keys address nested maps. */
   increment(path: string, deltas: Record<string, number>, extra?: Data): Promise<void>;
   query(collection: string, opts?: QueryOptions): Promise<{ id: string; data: Data }[]>;
-  /** Non-transactional batched writes (chunked to the 500-op limit). */
+  /** Batched writes; ops on the same path apply in order. */
   writeBatch(ops: WriteOp[]): Promise<void>;
   listIds(collection: string): Promise<string[]>;
 }
@@ -54,6 +54,19 @@ interface Entry {
 }
 
 const clone = <T>(v: T): T => structuredClone(v);
+
+/** Apply numeric increments to a copy of `data`. Dotted keys address nested maps. */
+export function applyIncrements(data: Data, deltas: Record<string, number>): Data {
+  const out = clone(data);
+  for (const [k, d] of Object.entries(deltas)) {
+    const parts = k.split(".");
+    let node = out;
+    for (const part of parts.slice(0, -1)) node = (node[part] ??= {}) as Data;
+    const leaf = parts[parts.length - 1];
+    node[leaf] = ((node[leaf] as number) ?? 0) + d;
+  }
+  return out;
+}
 
 export class MemoryDb implements DocDb {
   readonly kind = "memory" as const;
@@ -78,7 +91,7 @@ export class MemoryDb implements DocDb {
       let writing = false;
       const tx: Tx = {
         get: async (path) => {
-          if (writing) throw new Error("Firestore transactions require all reads before writes");
+          if (writing) throw new Error("Transactions must do all reads before writes");
           await this.yieldTick();
           const e = this.docs.get(path);
           reads.set(path, e?.version ?? 0);
@@ -131,14 +144,7 @@ export class MemoryDb implements DocDb {
   }
 
   async increment(path: string, deltas: Record<string, number>, extra: Data = {}) {
-    const data = structuredClone(this.docs.get(path)?.data ?? {}) as Data;
-    for (const [k, d] of Object.entries(deltas)) {
-      const parts = k.split(".");
-      let node = data;
-      for (const part of parts.slice(0, -1)) node = (node[part] ??= {}) as Data;
-      const leaf = parts[parts.length - 1];
-      node[leaf] = ((node[leaf] as number) ?? 0) + d;
-    }
+    const data = applyIncrements(this.docs.get(path)?.data ?? {}, deltas);
     this.docs.set(path, { data: { ...data, ...clone(extra) }, version: ++this.versionCounter });
   }
 

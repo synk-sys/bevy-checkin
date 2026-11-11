@@ -14,7 +14,7 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
   - Bevy webhooks
   - built-in **demo data** for training volunteers
 
-## Quick start (no Firebase or Bevy needed)
+## Quick start (no Supabase or Bevy needed)
 
 ```bash
 npm install
@@ -31,7 +31,7 @@ Volunteers use password **`checkin`**. They can check people in, search, print b
 
 ## Sign-in
 
-Each person signs in with their name and their own password. List them in `.env.local` (locally) or as App Hosting secrets (deployed):
+Each person signs in with their name and their own password. List them in `.env.local` (locally) or in your host's environment variables (deployed):
 
 ```
 ADMIN_USERS=Kritima:long-pass-1
@@ -62,28 +62,42 @@ Bevy doesn't publish a public API reference; access is arranged per organization
 - **Webhooks:** set `BEVY_WEBHOOK_SECRET`, then point Bevy's attendee webhooks at `/api/bevy/webhook`. Send the secret in the `x-webhook-secret` header or as `?secret=`.
 - **QR codes:** whatever a ticket QR contains (a bare code, a registration ID, or a URL with the code inside) is matched against ticket codes and attendee IDs.
 
-## Deploying (Firebase App Hosting)
+## Deploying (Supabase + Vercel)
 
-1. Create a Firebase project (Blaze plan) and a Firestore database.
-2. Fill in `apphosting.yaml`: the project ID and the Bevy settings. Then run:
-   ```bash
-   firebase apphosting:secrets:set admin-users      # e.g. Kritima:long-pass-1
-   firebase apphosting:secrets:set staff-users      # e.g. Priya:pass-2,Sam:pass-3
-   firebase apphosting:secrets:set session-secret   # any long random string
-   firebase apphosting:secrets:set bevy-api-token
-   cp .firebaserc.example .firebaserc   # set your project id
-   firebase deploy --only firestore:rules,firestore:indexes
-   firebase apphosting:backends:create   # connect this repo, branch main
-   ```
-3. Sign in as an admin and run **Admin → Sync from Bevy**.
+Attendee data is stored in **Supabase** Postgres. Supabase doesn't host Next.js apps, so the app itself runs on **Vercel** (any Node.js host works).
 
-Firestore rules deny all client access. Attendee data is only ever read through authenticated server routes.
+1. **Supabase:** create a project. Under **Connect**, copy the **Transaction pooler** connection string (port 6543) and put your database password in it. That's your `DATABASE_URL`. No SQL to run: the app creates its `checkin_docs` table the first time it starts.
+2. **Vercel:** at [vercel.com/new](https://vercel.com/new), import this GitHub repo. Before deploying, add these environment variables:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | the Supabase connection string |
+   | `ADMIN_USERS` | e.g. `Kritima:long-pass-1` |
+   | `STAFF_USERS` | e.g. `Priya:pass-2,Sam:pass-3` |
+   | `SESSION_SECRET` | any long random string (`openssl rand -base64 32`) |
+   | `NEXT_PUBLIC_EVENT_NAME` | your event's name |
+   | `BEVY_API_BASE_URL`, `BEVY_API_TOKEN`, `BEVY_EVENT_ID` | from Bevy (see above) |
+
+   Under **Settings → Functions**, set the region closest to your Supabase project's region.
+3. Deploy, sign in as an admin and run **Admin → Sync from Bevy**.
+
+To change who can sign in later, edit the variables in Vercel and redeploy.
+
+The table has row level security turned on with no policies, so Supabase's public API (the anon key) can't read it. The app connects to the database directly, and attendee data is only ever read through authenticated server routes.
 
 ## Tests
 
 ```bash
 npm test                          # 22 unit/API tests
 npm run build && npm run test:e2e # 10 Playwright tests, incl. a real camera QR scan
+```
+
+Both run on the in-memory store. To run them against a real Postgres, start a **throwaway** one (the tests delete its `checkin_docs` table):
+
+```bash
+docker run -d --rm --name checkin-pg -e POSTGRES_PASSWORD=test -p 54329:5432 postgres:17-alpine
+TEST_DATABASE_URL=postgres://postgres:test@localhost:54329/postgres npx vitest run tests/unit/checkin.test.ts
+DATABASE_URL=postgres://postgres:test@localhost:54329/postgres CI=1 npm run test:e2e
 ```
 
 The unit and API tests cover:

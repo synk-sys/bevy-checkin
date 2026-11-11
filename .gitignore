@@ -10,7 +10,4 @@ next-env.d.ts
 *.tsbuildinfo
 playwright-report
 test-results
-.firebase
-firebase-debug.log
-firestore-debug.log
 .env.production

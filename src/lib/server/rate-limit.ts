@@ -1,6 +1,6 @@
 /**
- * Sliding-window rate limiter (per server instance). Firestore transactions
- * remain the source of truth for "one tile per participant"; this layer just
+ * Sliding-window rate limiter (per server instance). Database transactions
+ * remain the source of truth for "one check-in per ticket"; this layer just
  * absorbs abuse and accidental retry storms cheaply.
  */
 export class RateLimiter {

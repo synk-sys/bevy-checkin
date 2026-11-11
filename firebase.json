@@ -1,8 +1,0 @@
-{
-  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
-  "apphosting": {
-    "backendId": "bevy-checkin",
-    "rootDir": "/",
-    "ignore": ["node_modules", ".git", "tests", "playwright-report", "test-results"]
-  }
-}

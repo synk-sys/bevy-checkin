@@ -19,7 +19,7 @@ export function clean(s: unknown, max = 120): string {
     .slice(0, max);
 }
 
-/** Safe map key for Firestore dotted field paths. */
+/** Safe map key for dotted field paths (stats increments). */
 export function mapKey(s: string): string {
   return (s || "unknown").replace(/[.\/~*\[\]`]/g, "_").slice(0, 60) || "unknown";
 }
