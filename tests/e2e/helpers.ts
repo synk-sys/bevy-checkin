@@ -1,7 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 
+/** Give the page its own client address, so the per-IP login limit doesn't trip across tests. */
+let ip = 0;
+export async function ownAddress(page: Page) {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.1.0.${++ip}` });
+}
+
 export async function signIn(page: Page, role: "staff" | "admin", desk = "Desk 1", name = role === "admin" ? "Ada Admin" : "Sam Staff") {
-  await page.goto("/login");
+  await ownAddress(page);
+  // Admins use the admin sign-in page; land on the desk so every test starts there.
+  await page.goto(role === "admin" ? "/admin/login?next=/" : "/login");
   await page.getByLabel("Your name").fill(name);
   await page.getByLabel("Password").fill(role === "admin" ? "admin-e2e" : "staff-e2e");
   await page.getByRole("button", { name: "Sign in" }).click();

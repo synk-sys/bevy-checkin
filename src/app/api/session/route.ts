@@ -15,9 +15,13 @@ export async function POST(req: NextRequest) {
   try {
     if (!sameOrigin(req)) return errorResponse(403, "FORBIDDEN", "Cross-site request blocked");
     if (!loginLimiter.check(clientIp(req)).ok) return errorResponse(429, "RATE_LIMITED", "Too many attempts. Wait a few minutes.");
-    const { password, name } = z.object({ password: z.string().max(200), name: z.string().min(1).max(40) }).parse(await readJson(req));
+    const { password, name, adminOnly } = z
+      .object({ password: z.string().max(200), name: z.string().min(1).max(40), adminOnly: z.boolean().optional() })
+      .parse(await readJson(req));
     const session = authenticate(name, password);
     if (!session) return errorResponse(401, "UNAUTHORIZED", "Incorrect name or password");
+    // The admin sign-in page doesn't let volunteers in (and doesn't start a session for them).
+    if (adminOnly && session.role !== "admin") return errorResponse(403, "FORBIDDEN", "This sign-in is for admins. Volunteers sign in on the main page.");
     const res = json({ session });
     issueSession(res, session);
     return res;

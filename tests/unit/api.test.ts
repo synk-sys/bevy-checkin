@@ -20,8 +20,12 @@ const req = (path: string, init: { method?: string; body?: unknown; cookie?: str
     headers: { ...(init.cookie ? { cookie: init.cookie } : {}), ...(init.body ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) },
   });
 
+// Each sign-in comes from its own address, so the per-IP login limit doesn't trip across tests.
+let ip = 0;
+const loginReq = (body: Record<string, unknown>) => req("/api/session", { method: "POST", body, headers: { "x-forwarded-for": `10.0.0.${++ip}` } });
+
 async function signIn(password: string, name = "Alex") {
-  const res = await login(req("/api/session", { method: "POST", body: { password, name } }));
+  const res = await login(loginReq({ password, name }));
   expect(res.status).toBe(200);
   return res.headers.get("set-cookie")!.split(";")[0];
 }
@@ -41,7 +45,7 @@ describe("access control", () => {
   });
 
   it("rejects wrong passwords and forged cookies", async () => {
-    expect((await login(req("/api/session", { method: "POST", body: { password: "nope", name: "X" } }))).status).toBe(401);
+    expect((await login(loginReq({ password: "nope", name: "X" }))).status).toBe(401);
     expect((await search(req("/api/attendees/search?q=ai", { cookie: "checkin_session=eyJyb2xlIjoiYWRtaW4ifQ.forged" }), undefined)).status).toBe(401);
   });
 
@@ -55,6 +59,14 @@ describe("access control", () => {
     expect(body.attendee.desk).toBe("Front bDeskb"); // sanitised desk label
     expect((await exportCsv(req("/api/admin/export", { cookie }), undefined)).status).toBe(403);
     expect((await sync(req("/api/admin/sync", { method: "POST", cookie, body: { source: "demo" } }), undefined)).status).toBe(403);
+  });
+
+  it("admin sign-in page only lets admins in", async () => {
+    const attempt = (password: string) => login(loginReq({ password, name: "Alex", adminOnly: true }));
+    const staff = await attempt("checkin");
+    expect(staff.status).toBe(403);
+    expect(staff.headers.get("set-cookie")).toBeNull();
+    expect(await (await attempt("admin")).json()).toEqual({ session: { role: "admin", name: "Alex" } });
   });
 
   it("records admin check-ins under Admin, ignoring any desk name sent", async () => {
@@ -76,7 +88,7 @@ describe("access control", () => {
     process.env.ADMIN_USERS = "Kritima:lead:pass";
     process.env.STAFF_USERS = "Priya Shah:p-123, Sam:s-456";
     try {
-      const attempt = (name: string, password: string) => login(req("/api/session", { method: "POST", body: { password, name } }));
+      const attempt = (name: string, password: string) => login(loginReq({ password, name }));
       expect(await (await attempt("kritima", "lead:pass")).json()).toEqual({ session: { role: "admin", name: "Kritima" } });
       expect(await (await attempt("  priya  SHAH ", "p-123")).json()).toEqual({ session: { role: "staff", name: "Priya Shah" } });
       expect((await attempt("Sam", "p-123")).status).toBe(401); // someone else's password

@@ -15,7 +15,7 @@ const NAV = [
   { href: "/admin", label: "Admin", admin: true },
 ];
 
-export function Logo() {
+export function Logo({ label = "Check-in Desk" }: { label?: string }) {
   return (
     <span className="flex items-center gap-2 font-display text-lg font-bold">
       <span className="grid grid-cols-2 gap-0.5" aria-hidden="true">
@@ -23,7 +23,7 @@ export function Logo() {
           <span key={c} className="size-2.5 rounded-[3px]" style={{ background: c }} />
         ))}
       </span>
-      Check-in Desk
+      {label}
     </span>
   );
 }
@@ -35,8 +35,8 @@ export function AppShell({ children, admin = false }: { children: React.ReactNod
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !session) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [loading, session, router, pathname]);
+    if (!loading && !session) router.replace(`${admin ? "/admin/login" : "/login"}?next=${encodeURIComponent(pathname)}`);
+  }, [loading, session, router, pathname, admin]);
 
   if (loading || !session) {
     return (

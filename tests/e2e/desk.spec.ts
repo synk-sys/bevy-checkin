@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { resetWithDemo, signIn, uncheckedAttendees } from "./helpers";
+import { ownAddress, resetWithDemo, signIn, uncheckedAttendees } from "./helpers";
 
 test.describe.serial("check-in desk", () => {
   test("USB-scanner style code entry checks in once, then warns on repeat", async ({ page }) => {
@@ -97,6 +97,23 @@ test("staff cannot reach admin features", async ({ page }) => {
   await page.goto("/admin");
   await expect(page.getByText("This page is for admins only.")).toBeVisible();
   expect((await page.request.get("/api/admin/export")).status()).toBe(403);
+});
+
+test("admin sign-in page is labelled Admin and turns volunteers away", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await expect(page.getByText("Admin", { exact: true })).toBeVisible();
+  await expect(page.getByText("Start your shift")).toHaveCount(0);
+  await expect(page.getByText("Check-in Desk")).toHaveCount(0);
+  await page.getByLabel("Your name").fill("Sam Staff");
+  await page.getByLabel("Password").fill("staff-e2e");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("This sign-in is for admins")).toBeVisible();
+  await page.getByLabel("Your name").fill("Ada Admin");
+  await page.getByLabel("Password").fill("admin-e2e");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
 });
 
 test("signed-out visitors are sent to login and see no attendee data", async ({ page }) => {
