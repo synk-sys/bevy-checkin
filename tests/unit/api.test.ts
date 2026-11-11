@@ -61,6 +61,20 @@ describe("access control", () => {
     expect((await sync(req("/api/admin/sync", { method: "POST", cookie, body: { source: "demo" } }), undefined)).status).toBe(403);
   });
 
+  it("someone in both lists gets the role of the page they sign in on", async () => {
+    process.env.ADMIN_USERS = "Kritima:sunflower42";
+    process.env.STAFF_USERS = "Kritima:sunflower42";
+    try {
+      const volunteerPage = await login(loginReq({ name: "Kritima", password: "sunflower42" }));
+      expect(await volunteerPage.json()).toEqual({ session: { role: "staff", name: "Kritima" } });
+      const adminPage = await login(loginReq({ name: "Kritima", password: "sunflower42", adminOnly: true }));
+      expect(await adminPage.json()).toEqual({ session: { role: "admin", name: "Kritima" } });
+    } finally {
+      delete process.env.ADMIN_USERS;
+      delete process.env.STAFF_USERS;
+    }
+  });
+
   it("admin sign-in page only lets admins in", async () => {
     const attempt = (password: string) => login(loginReq({ password, name: "Alex", adminOnly: true }));
     const staff = await attempt("checkin");

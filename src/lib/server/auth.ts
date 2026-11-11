@@ -53,28 +53,28 @@ function parseUsers(v: string | undefined, role: Role): Account[] {
     .filter((a): a is Account => !!a?.name && !!a.password);
 }
 
-/** Accounts from ADMIN_USERS / STAFF_USERS. Admins are listed first, so a name in both lists gets admin. */
+/** Accounts from ADMIN_USERS / STAFF_USERS. A name may be in both lists. */
 export function accounts(): Account[] {
   return [...parseUsers(process.env.ADMIN_USERS, "admin"), ...parseUsers(process.env.STAFF_USERS, "staff")];
 }
 
 /**
  * Check a name + password. Names match case-insensitively; the session uses the configured spelling.
+ * When the name and password match accounts in both lists, `prefer` picks the role (the volunteer
+ * sign-in page prefers staff, the admin page admin); otherwise admin wins.
  * With no accounts configured outside production, any name works with "admin" or "checkin".
  */
-export function authenticate(name: string, password: string): Session | null {
+export function authenticate(name: string, password: string, prefer?: Role): Session | null {
   const list = accounts();
   if (!list.length) {
     if (process.env.NODE_ENV === "production") return null;
     const role = safeEqual(sign(password), sign("admin")) ? "admin" : safeEqual(sign(password), sign("checkin")) ? "staff" : null;
     return role && { role, name };
   }
-  let match: Account | null = null;
-  for (const a of list) {
-    // Check every account so timing doesn't reveal which names exist.
-    if (nameKey(a.name) === nameKey(name) && safeEqual(sign(password), sign(a.password))) match ??= a;
-  }
-  return match && { role: match.role, name: match.name };
+  // Check every account so timing doesn't reveal which names exist.
+  const matches = list.filter((a) => safeEqual(sign(password), sign(a.password)) && nameKey(a.name) === nameKey(name));
+  const match = matches.find((a) => a.role === prefer) ?? matches[0];
+  return match ? { role: match.role, name: match.name } : null;
 }
 
 export function issueSession(res: NextResponse, session: Session) {

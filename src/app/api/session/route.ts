@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { password, name, adminOnly } = z
       .object({ password: z.string().max(200), name: z.string().min(1).max(40), adminOnly: z.boolean().optional() })
       .parse(await readJson(req));
-    const session = authenticate(name, password);
+    const session = authenticate(name, password, adminOnly ? "admin" : "staff");
     if (!session) return errorResponse(401, "UNAUTHORIZED", "Incorrect name or password");
     // The admin sign-in page doesn't let volunteers in (and doesn't start a session for them).
     if (adminOnly && session.role !== "admin") return errorResponse(403, "FORBIDDEN", "This sign-in is for admins. Volunteers sign in on the main page.");
