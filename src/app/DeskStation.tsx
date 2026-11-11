@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { QrScanner } from "@/components/desk/QrScanner";
 import { ResultBanner } from "@/components/desk/ResultBanner";
 import { WalkInDialog } from "@/components/desk/WalkInDialog";
-import { useSession } from "@/hooks/useSession";
 import { ApiError, api, getDesk } from "@/lib/client/api";
 import { printBadge } from "@/lib/client/print";
 import { beep } from "@/lib/client/sound";
@@ -29,18 +28,13 @@ export function DeskStation() {
   const [sound, setSound] = useState(true);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [desk, setDeskLabel] = useState("Desk");
-  const isAdmin = useSession().session?.role === "admin";
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Browser-only values, read after hydration.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDeskLabel(isAdmin ? "Admin" : getDesk());
-  }, [isAdmin]);
-
-  useEffect(() => {
+    setDeskLabel(getDesk());
     try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSound(localStorage.getItem("checkin:sound") !== "off");
     } catch {}
     api<{ config: EventConfig }>("/api/dashboard").then((d) => setConfig(d.config)).catch(() => {});

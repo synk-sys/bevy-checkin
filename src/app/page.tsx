@@ -3,7 +3,7 @@ import { DeskStation } from "./DeskStation";
 
 export default function DeskPage() {
   return (
-    <AppShell>
+    <AppShell staffOnly>
       <DeskStation />
     </AppShell>
   );

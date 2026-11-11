@@ -3,7 +3,7 @@ import path from "node:path";
 import QRCode from "qrcode";
 import { expect, test } from "@playwright/test";
 import { demoAttendees } from "../../src/lib/demo";
-import { signIn } from "./helpers";
+import { resetWithDemo, signIn } from "./helpers";
 
 /**
  * End-to-end camera test: render a real demo ticket's QR code into a Y4M
@@ -46,9 +46,8 @@ test.use({
 });
 
 test("holding a ticket QR up to the camera checks the attendee in", async ({ page }) => {
-  await signIn(page, "admin");
-  await page.request.post("/api/admin/maintenance", { data: { action: "reset", confirm: "RESET" } });
-  await page.request.post("/api/admin/sync", { data: { source: "demo", count: 60 } });
+  await signIn(page, "staff", "Camera Desk");
+  await resetWithDemo(page, 60);
   await page.getByTestId("camera-toggle").click();
   const result = page.getByTestId("result");
   await expect(result).toHaveAttribute("data-status", "checked_in", { timeout: 20_000 });

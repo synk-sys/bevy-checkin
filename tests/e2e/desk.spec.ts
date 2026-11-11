@@ -3,7 +3,7 @@ import { ownAddress, resetWithDemo, signIn, uncheckedAttendees } from "./helpers
 
 test.describe.serial("check-in desk", () => {
   test("USB-scanner style code entry checks in once, then warns on repeat", async ({ page }) => {
-    await signIn(page, "admin");
+    await signIn(page, "staff");
     await resetWithDemo(page);
     const [a] = await uncheckedAttendees(page);
     const input = page.getByTestId("scan-input");
@@ -16,11 +16,11 @@ test.describe.serial("check-in desk", () => {
     await input.fill(a.ticketCode.toLowerCase());
     await input.press("Enter");
     await expect(result).toHaveAttribute("data-status", "already");
-    await expect(result).toContainText("Admin"); // admins check in without a desk
+    await expect(result).toContainText("Desk 1");
   });
 
   test("search by name and check in from results", async ({ page }) => {
-    await signIn(page, "admin");
+    await signIn(page, "staff");
     // Pick someone not yet checked in and search on their (unique) email prefix.
     const [target] = await uncheckedAttendees(page);
     await page.getByTestId("scan-input").fill(target.email.split("@")[0]);
@@ -89,6 +89,16 @@ test("dashboard updates live when another desk checks someone in", async ({ page
 
   await expect(stat).toHaveText(String(before + 1), { timeout: 10_000 });
   await expect(page.getByTestId("recent-feed")).toContainText(`${a.firstName} ${a.lastName}`);
+});
+
+test("admins don't get the desk and are sent to the Admin page", async ({ page }) => {
+  await signIn(page, "admin");
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(nav.getByRole("link", { name: "Dashboard" })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Desk" })).toHaveCount(0);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByTestId("scan-input")).toHaveCount(0);
 });
 
 test("staff cannot reach admin features", async ({ page }) => {

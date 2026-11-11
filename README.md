@@ -21,13 +21,15 @@ npm install
 npm run dev     # http://localhost:3000
 ```
 
-Until you set up accounts (see [Sign-in](#sign-in)), sign in with any name and password **`admin`**. Then:
+Until you set up accounts (see [Sign-in](#sign-in)), go to **`/admin/login`** and sign in with any name and password **`admin`**. Then:
 
 1. **Admin → Load demo attendees** creates 240 dummy attendees.
 2. **Admin → Printable test tickets** shows QR codes you can hold up to the camera.
-3. **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
+3. Sign out, then sign in at **`/login`** with password **`checkin`** as a volunteer. The **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
-Volunteers use password **`checkin`**, then name their desk ("Desk 2"), which the dashboard uses to show which desk is busiest. Admins have their own sign-in page at **`/admin/login`** (volunteers are turned away there) and aren't asked for a desk; anything they do is recorded under **Admin**. Volunteers can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+Volunteers name their desk ("Desk 2") after signing in; the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+
+Admins don't scan tickets: they have their own sign-in page at **`/admin/login`** (volunteers are turned away there), aren't asked for a desk and don't get the Desk page. They see Dashboard, Attendees and Admin. An undo by an admin is recorded under **Admin**.
 
 ## Sign-in
 
@@ -89,7 +91,7 @@ The table has row level security turned on with no policies, so Supabase's publi
 
 ```bash
 npm test                          # 24 unit/API tests
-npm run build && npm run test:e2e # 11 Playwright tests, incl. a real camera QR scan
+npm run build && npm run test:e2e # 12 Playwright tests, incl. a real camera QR scan
 ```
 
 Both run on the in-memory store. To run them against a real Postgres, start a **throwaway** one (the tests delete its `checkin_docs` table):
