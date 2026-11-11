@@ -123,9 +123,7 @@ export function DeskStation() {
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h1 className="font-display text-2xl font-bold">{config?.eventName ?? "Check-in"}</h1>
-            <p className="text-sm text-muted-foreground">
-              {desk} · scan a ticket QR code, or search by name or email
-            </p>
+            <p className="text-sm text-muted-foreground">{desk}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={toggleSound} aria-pressed={sound} aria-label={sound ? "Mute sounds" : "Unmute sounds"}>
