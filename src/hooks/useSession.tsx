@@ -2,13 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/client/api";
-import { getClientAuth } from "@/lib/client/firebase";
-import { isFirebaseMode } from "@/lib/env";
 import type { Session } from "@/lib/types";
 
 interface SessionState {
   loading: boolean;
-  mode: "firebase" | "local";
   session: Session | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -18,13 +15,11 @@ const Ctx = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"firebase" | "local">(isFirebaseMode() ? "firebase" : "local");
   const [session, setSession] = useState<Session | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const r = await api<{ mode: "firebase" | "local"; session: Session | null }>("/api/session");
-      setMode(r.mode);
+      const r = await api<{ session: Session | null }>("/api/session");
       setSession(r.session);
     } catch {
       setSession(null);
@@ -34,8 +29,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (isFirebaseMode()) await (await getClientAuth())?.signOut();
-    else await api("/api/session", { method: "DELETE" });
+    await api("/api/session", { method: "DELETE" });
     setSession(null);
   }, []);
 
@@ -45,7 +39,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
-  return <Ctx.Provider value={{ loading, mode, session, refresh, signOut }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ loading, session, refresh, signOut }}>{children}</Ctx.Provider>;
 }
 
 export function useSession() {

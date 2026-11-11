@@ -4,7 +4,7 @@ export async function signIn(page: Page, role: "staff" | "admin", desk = "Desk 1
   await page.goto("/login");
   await page.getByLabel("Your name").fill(name);
   await page.getByLabel("Desk name").fill(desk);
-  await page.getByLabel("Passcode").fill(role === "admin" ? "admin-e2e" : "staff-e2e");
+  await page.getByLabel("Password").fill(role === "admin" ? "admin-e2e" : "staff-e2e");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByTestId("scan-input")).toBeVisible();
 }

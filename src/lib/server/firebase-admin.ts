@@ -1,5 +1,4 @@
 import { getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 let app: App | undefined;
@@ -24,5 +23,3 @@ export function getAdminFirestore(): Firestore {
   firestore.settings({ ignoreUndefinedProperties: true });
   return firestore;
 }
-
-export const getAdminAuth = () => getAuth(getAdminApp());

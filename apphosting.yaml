@@ -7,33 +7,27 @@ runConfig:
   memoryMiB: 512
 
 env:
-  # Firebase web config (public; Firestore is locked down by rules)
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: "REPLACE_ME"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: "REPLACE_ME.firebaseapp.com"
-    availability: [BUILD, RUNTIME]
+  # Firebase project (attendee data is stored in its Firestore database)
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: "REPLACE_ME"
-    availability: [BUILD, RUNTIME]
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     value: "REPLACE_ME"
     availability: [BUILD, RUNTIME]
   - variable: NEXT_PUBLIC_EVENT_NAME
     value: "DevFest Toronto 2026"
     availability: [BUILD, RUNTIME]
 
-  # Who may sign in (Google accounts)
-  - variable: ADMIN_EMAILS
-    value: "lead@example.com"
+  # Who may sign in: "Name:password,Name:password" (no commas in passwords). Set with:
+  #   firebase apphosting:secrets:set admin-users
+  #   firebase apphosting:secrets:set staff-users
+  #   firebase apphosting:secrets:set session-secret   (any long random string)
+  - variable: ADMIN_USERS
+    secret: admin-users
     availability: [RUNTIME]
-  - variable: STAFF_EMAILS
-    value: "volunteer1@example.com,volunteer2@example.com"
+  - variable: STAFF_USERS
+    secret: staff-users
     availability: [RUNTIME]
-  # - variable: STAFF_DOMAINS        # e.g. everyone @yourgdg.org
-  #   value: "yourgdg.org"
-  #   availability: [RUNTIME]
+  - variable: SESSION_SECRET
+    secret: session-secret
+    availability: [RUNTIME]
 
   # Bevy API (create secrets with: firebase apphosting:secrets:set bevy-api-token)
   - variable: BEVY_API_BASE_URL

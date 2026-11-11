@@ -21,13 +21,28 @@ npm install
 npm run dev     # http://localhost:3000
 ```
 
-Sign in with any name, a desk name and passcode **`admin`**. Then:
+Until you set up accounts (see [Sign-in](#sign-in)), sign in with any name, a desk name and password **`admin`**. Then:
 
 1. **Admin → Load demo attendees** creates 240 dummy attendees.
 2. **Admin → Printable test tickets** shows QR codes you can hold up to the camera.
 3. **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
-Volunteers use passcode **`checkin`**. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+Volunteers use password **`checkin`**. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+
+## Sign-in
+
+Each person signs in with their name and their own password. List them in `.env.local` (locally) or as App Hosting secrets (deployed):
+
+```
+ADMIN_USERS=Kritima:long-pass-1
+STAFF_USERS=Priya:pass-2,Sam:pass-3
+SESSION_SECRET=any-long-random-string
+```
+
+- Entries are `Name:password`, separated by commas, so passwords can't contain commas.
+- Names match regardless of capitals or extra spaces. Check-ins are recorded under the name as you wrote it.
+- Once any account is listed, the `admin` / `checkin` fallback stops working. That fallback never works on a deployed server.
+- To add, remove or change someone, edit the list and restart the server (or redeploy). A session lasts 14 hours. Removing someone from the list doesn't end a session they've already started; change `SESSION_SECRET` to sign everyone out.
 
 ## Bevy integration
 
@@ -49,9 +64,12 @@ Bevy doesn't publish a public API reference; access is arranged per organization
 
 ## Deploying (Firebase App Hosting)
 
-1. Create a Firebase project (Blaze plan) and a Firestore database. Enable **Google** sign-in under Authentication.
-2. Fill in `apphosting.yaml`: the web config, `ADMIN_EMAILS`, `STAFF_EMAILS`/`STAFF_DOMAINS` and the Bevy settings. Then run:
+1. Create a Firebase project (Blaze plan) and a Firestore database.
+2. Fill in `apphosting.yaml`: the project ID and the Bevy settings. Then run:
    ```bash
+   firebase apphosting:secrets:set admin-users      # e.g. Kritima:long-pass-1
+   firebase apphosting:secrets:set staff-users      # e.g. Priya:pass-2,Sam:pass-3
+   firebase apphosting:secrets:set session-secret   # any long random string
    firebase apphosting:secrets:set bevy-api-token
    cp .firebaserc.example .firebaserc   # set your project id
    firebase deploy --only firestore:rules,firestore:indexes
@@ -64,7 +82,7 @@ Firestore rules deny all client access. Attendee data is only ever read through 
 ## Tests
 
 ```bash
-npm test                          # 21 unit/API tests
+npm test                          # 22 unit/API tests
 npm run build && npm run test:e2e # 10 Playwright tests, incl. a real camera QR scan
 ```
 

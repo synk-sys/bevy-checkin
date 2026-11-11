@@ -1,8 +1,5 @@
 "use client";
 
-import { isFirebaseMode } from "@/lib/env";
-import { getClientAuth } from "./firebase";
-
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -30,15 +27,7 @@ export function setDesk(name: string) {
   } catch {}
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
-  if (!isFirebaseMode()) return {};
-  const auth = await getClientAuth();
-  await auth?.authStateReady();
-  const user = auth?.currentUser;
-  return user ? { authorization: `Bearer ${await user.getIdToken()}` } : {};
-}
-
-/** Fetch wrapper: adds auth + desk headers; 404 check-in results are returned, not thrown. */
+/** Fetch wrapper: sends the session cookie + desk header; 404 check-in results are returned, not thrown. */
 export async function api<T>(path: string, init: RequestInit & { allow404?: boolean } = {}): Promise<T> {
   const { allow404, ...rest } = init;
   let res: Response;
@@ -49,7 +38,6 @@ export async function api<T>(path: string, init: RequestInit & { allow404?: bool
       headers: {
         ...(rest.body ? { "content-type": "application/json" } : {}),
         "x-desk": getDesk(),
-        ...(await authHeaders()),
         ...(rest.headers ?? {}),
       },
     });
@@ -64,7 +52,7 @@ export async function api<T>(path: string, init: RequestInit & { allow404?: bool
 }
 
 export async function downloadAuthed(path: string, filename: string) {
-  const res = await fetch(path, { credentials: "same-origin", headers: await authHeaders() });
+  const res = await fetch(path, { credentials: "same-origin" });
   if (!res.ok) throw new ApiError(res.status, "ERROR", "Download failed");
   const url = URL.createObjectURL(await res.blob());
   const a = Object.assign(document.createElement("a"), { href: url, download: filename });

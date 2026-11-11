@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { NextRequest, NextResponse } from "next/server";
-import { isFirebaseMode } from "@/lib/env";
 import { clean } from "@/lib/text";
 import type { Role, Session } from "@/lib/types";
 
@@ -10,7 +9,7 @@ const SHIFT_MS = 14 * 60 * 60 * 1000;
 function secret() {
   const s = process.env.SESSION_SECRET;
   if (s && s.length >= 16) return s;
-  if (process.env.NODE_ENV === "production" && !isFirebaseMode()) throw new Error("SESSION_SECRET (16+ chars) is required in production");
+  if (process.env.NODE_ENV === "production") throw new Error("SESSION_SECRET (16+ chars) is required in production");
   return "dev-only-insecure-session-secret";
 }
 const sign = (v: string) => createHmac("sha256", secret()).update(v).digest("base64url");
@@ -20,28 +19,8 @@ function safeEqual(a: string, b: string) {
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
-const list = (v?: string) => (v ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-
-/** Staff (check-in volunteers) and admins. Firebase: Google sign-in + allow-lists. Local: passcodes. */
+/** Staff (check-in volunteers) and admins, signed in with a per-person password; the session is a signed cookie. */
 export async function getSession(req: NextRequest): Promise<Session | null> {
-  if (isFirebaseMode()) {
-    const h = req.headers.get("authorization") ?? "";
-    if (!h.startsWith("Bearer ")) return null;
-    try {
-      const { getAdminAuth } = await import("./firebase-admin");
-      const d = await getAdminAuth().verifyIdToken(h.slice(7));
-      const email = d.email?.toLowerCase();
-      if (!email || d.email_verified !== true) return null;
-      const domain = email.split("@")[1];
-      if (d.role === "admin" || list(process.env.ADMIN_EMAILS).includes(email)) return { role: "admin", name: d.name ?? email };
-      if (d.role === "staff" || list(process.env.STAFF_EMAILS).includes(email) || list(process.env.STAFF_DOMAINS).includes(domain)) {
-        return { role: "staff", name: d.name ?? email };
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
   const raw = req.cookies.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   const i = raw.lastIndexOf(".");
@@ -55,20 +34,47 @@ export async function getSession(req: NextRequest): Promise<Session | null> {
   }
 }
 
-export function passcodeFor(role: Role): string | null {
-  const v = role === "admin" ? process.env.ADMIN_PASSCODE : process.env.STAFF_PASSCODE;
-  if (v) return v;
-  if (process.env.NODE_ENV === "production") return null;
-  return role === "admin" ? "admin" : "checkin";
+interface Account {
+  name: string;
+  password: string;
+  role: Role;
 }
 
-/** Match a passcode to a role (admin passcode wins). */
-export function roleForPasscode(input: string): Role | null {
-  for (const role of ["admin", "staff"] as Role[]) {
-    const expected = passcodeFor(role);
-    if (expected && safeEqual(sign(input), sign(expected))) return role;
+const nameKey = (n: string) => n.trim().replace(/\s+/g, " ").toLowerCase();
+
+/** Parse "Name:password,Name:password". The first colon splits, so passwords may contain colons but not commas. */
+function parseUsers(v: string | undefined, role: Role): Account[] {
+  return (v ?? "")
+    .split(",")
+    .map((entry) => {
+      const i = entry.indexOf(":");
+      return i > 0 ? { name: entry.slice(0, i).trim(), password: entry.slice(i + 1).trim(), role } : null;
+    })
+    .filter((a): a is Account => !!a?.name && !!a.password);
+}
+
+/** Accounts from ADMIN_USERS / STAFF_USERS. Admins are listed first, so a name in both lists gets admin. */
+export function accounts(): Account[] {
+  return [...parseUsers(process.env.ADMIN_USERS, "admin"), ...parseUsers(process.env.STAFF_USERS, "staff")];
+}
+
+/**
+ * Check a name + password. Names match case-insensitively; the session uses the configured spelling.
+ * With no accounts configured outside production, any name works with "admin" or "checkin".
+ */
+export function authenticate(name: string, password: string): Session | null {
+  const list = accounts();
+  if (!list.length) {
+    if (process.env.NODE_ENV === "production") return null;
+    const role = safeEqual(sign(password), sign("admin")) ? "admin" : safeEqual(sign(password), sign("checkin")) ? "staff" : null;
+    return role && { role, name };
   }
-  return null;
+  let match: Account | null = null;
+  for (const a of list) {
+    // Check every account so timing doesn't reveal which names exist.
+    if (nameKey(a.name) === nameKey(name) && safeEqual(sign(password), sign(a.password))) match ??= a;
+  }
+  return match && { role: match.role, name: match.name };
 }
 
 export function issueSession(res: NextResponse, session: Session) {

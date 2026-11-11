@@ -20,8 +20,8 @@ const req = (path: string, init: { method?: string; body?: unknown; cookie?: str
     headers: { ...(init.cookie ? { cookie: init.cookie } : {}), ...(init.body ? { "content-type": "application/json" } : {}), ...(init.headers ?? {}) },
   });
 
-async function signIn(passcode: string) {
-  const res = await login(req("/api/session", { method: "POST", body: { passcode, name: "Alex" } }));
+async function signIn(password: string, name = "Alex") {
+  const res = await login(req("/api/session", { method: "POST", body: { password, name } }));
   expect(res.status).toBe(200);
   return res.headers.get("set-cookie")!.split(";")[0];
 }
@@ -40,8 +40,8 @@ describe("access control", () => {
     expect((await checkin(req("/api/checkin", { method: "POST", body: { code: "x" } }), undefined)).status).toBe(401);
   });
 
-  it("rejects wrong passcodes and forged cookies", async () => {
-    expect((await login(req("/api/session", { method: "POST", body: { passcode: "nope", name: "X" } }))).status).toBe(401);
+  it("rejects wrong passwords and forged cookies", async () => {
+    expect((await login(req("/api/session", { method: "POST", body: { password: "nope", name: "X" } }))).status).toBe(401);
     expect((await search(req("/api/attendees/search?q=ai", { cookie: "checkin_session=eyJyb2xlIjoiYWRtaW4ifQ.forged" }), undefined)).status).toBe(401);
   });
 
@@ -63,6 +63,25 @@ describe("access control", () => {
     const res = await exportCsv(req("/api/admin/export?status=in", { cookie }), undefined);
     const text = await res.text();
     expect(text).toContain("\"'=HYPERLINK(1)\"");
+  });
+
+  it("signs each person in with their own password and role", async () => {
+    process.env.ADMIN_USERS = "Kritima:lead:pass";
+    process.env.STAFF_USERS = "Priya Shah:p-123, Sam:s-456";
+    try {
+      const attempt = (name: string, password: string) => login(req("/api/session", { method: "POST", body: { password, name } }));
+      expect(await (await attempt("kritima", "lead:pass")).json()).toEqual({ session: { role: "admin", name: "Kritima" } });
+      expect(await (await attempt("  priya  SHAH ", "p-123")).json()).toEqual({ session: { role: "staff", name: "Priya Shah" } });
+      expect((await attempt("Sam", "p-123")).status).toBe(401); // someone else's password
+      expect((await attempt("Alex", "admin")).status).toBe(401); // dev fallback is off once accounts exist
+      const cookie = await signIn("s-456", "Sam");
+      const code = demoAttendees(30)[1].ticketCode;
+      const body = await (await checkin(req("/api/checkin", { method: "POST", cookie, body: { code } }), undefined)).json();
+      expect(body.attendee.checkedInBy).toBe("Sam");
+    } finally {
+      delete process.env.ADMIN_USERS;
+      delete process.env.STAFF_USERS;
+    }
   });
 
   it("blocks cross-site check-ins", async () => {
