@@ -21,13 +21,13 @@ npm install
 npm run dev     # http://localhost:3000
 ```
 
-Until you set up accounts (see [Sign-in](#sign-in)), sign in with any name, a desk name and password **`admin`**. Then:
+Until you set up accounts (see [Sign-in](#sign-in)), sign in with any name and password **`admin`**. Then:
 
 1. **Admin → Load demo attendees** creates 240 dummy attendees.
 2. **Admin → Printable test tickets** shows QR codes you can hold up to the camera.
 3. **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
-Volunteers use password **`checkin`**. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+Volunteers use password **`checkin`**, then name their desk ("Desk 2"), which the dashboard uses to show which desk is busiest. Admins aren't asked for a desk; anything they do is recorded under **Admin**. Volunteers can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
 
 ## Sign-in
 
@@ -88,7 +88,7 @@ The table has row level security turned on with no policies, so Supabase's publi
 ## Tests
 
 ```bash
-npm test                          # 22 unit/API tests
+npm test                          # 23 unit/API tests
 npm run build && npm run test:e2e # 10 Playwright tests, incl. a real camera QR scan
 ```
 

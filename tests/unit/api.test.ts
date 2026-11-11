@@ -57,6 +57,13 @@ describe("access control", () => {
     expect((await sync(req("/api/admin/sync", { method: "POST", cookie, body: { source: "demo" } }), undefined)).status).toBe(403);
   });
 
+  it("records admin check-ins under Admin, ignoring any desk name sent", async () => {
+    const cookie = await signIn("admin");
+    const code = demoAttendees(30)[2].ticketCode;
+    const body = await (await checkin(req("/api/checkin", { method: "POST", cookie, body: { code }, headers: { "x-desk": "Desk 4" } }), undefined)).json();
+    expect(body.attendee.desk).toBe("Admin");
+  });
+
   it("admins can export CSV with formula injection neutralised", async () => {
     await service.createWalkIn({ firstName: "=HYPERLINK(1)", lastName: "", email: "" }, { desk: "D", by: "x" }, true);
     const cookie = await signIn("admin");

@@ -14,6 +14,6 @@ export const GET = withRole<Ctx>("staff", async (_req, _s, { params }) => {
 /** Admin: undo a mistaken check-in. */
 export const PATCH = withRole<Ctx>("admin", async (req, session, { params }) => {
   z.object({ action: z.literal("undo") }).strict().parse(await readJson(req));
-  const attendee = await (await getService()).undoCheckIn((await params).id, { desk: deskFrom(req), by: session.name });
+  const attendee = await (await getService()).undoCheckIn((await params).id, { desk: deskFrom(req, session), by: session.name });
   return json({ attendee });
 });

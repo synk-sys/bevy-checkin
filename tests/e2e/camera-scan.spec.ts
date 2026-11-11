@@ -46,7 +46,7 @@ test.use({
 });
 
 test("holding a ticket QR up to the camera checks the attendee in", async ({ page }) => {
-  await signIn(page, "admin", "Camera Desk");
+  await signIn(page, "admin");
   await page.request.post("/api/admin/maintenance", { data: { action: "reset", confirm: "RESET" } });
   await page.request.post("/api/admin/sync", { data: { source: "demo", count: 60 } });
   await page.getByTestId("camera-toggle").click();

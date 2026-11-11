@@ -16,7 +16,7 @@ test.describe.serial("check-in desk", () => {
     await input.fill(a.ticketCode.toLowerCase());
     await input.press("Enter");
     await expect(result).toHaveAttribute("data-status", "already");
-    await expect(result).toContainText("Desk 1");
+    await expect(result).toContainText("Admin"); // admins check in without a desk
   });
 
   test("search by name and check in from results", async ({ page }) => {

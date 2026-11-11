@@ -12,7 +12,7 @@ const schema = z.union([
 export const POST = withRole("staff", async (req, session) => {
   const body = schema.parse(await readJson(req));
   const service = await getService();
-  const ctx = { desk: deskFrom(req), by: session.name };
+  const ctx = { desk: deskFrom(req, session), by: session.name };
   const result = "code" in body ? await service.checkInByCode(body.code, ctx) : await service.checkIn(body.attendeeId, ctx);
   return json(result, { status: result.status === "not_found" ? 404 : 200 });
 });

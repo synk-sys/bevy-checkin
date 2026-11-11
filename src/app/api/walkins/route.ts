@@ -16,6 +16,6 @@ const schema = z
 
 export const POST = withRole("staff", async (req, session) => {
   const { checkInNow, ...input } = schema.parse(await readJson(req));
-  const res = await (await getService()).createWalkIn(input, { desk: deskFrom(req), by: session.name }, checkInNow);
+  const res = await (await getService()).createWalkIn(input, { desk: deskFrom(req, session), by: session.name }, checkInNow);
   return json(res, { status: 201 });
 });

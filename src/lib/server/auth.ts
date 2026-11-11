@@ -88,7 +88,10 @@ export function issueSession(res: NextResponse, session: Session) {
   });
 }
 
-/** Desk label sent by the station (x-desk header), sanitised. */
-export function deskFrom(req: NextRequest) {
+/** Label recorded with an action. Admins have no desk; staff send theirs (x-desk header), sanitised. */
+export const ADMIN_DESK = "Admin";
+
+export function deskFrom(req: NextRequest, session: Session) {
+  if (session.role === "admin") return ADMIN_DESK;
   return clean(req.headers.get("x-desk") ?? "", 32).replace(/[^\w \-#]/g, "") || "Desk";
 }
