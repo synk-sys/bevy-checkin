@@ -10,7 +10,7 @@ import { ResultBanner } from "@/components/desk/ResultBanner";
 import { WalkInDialog } from "@/components/desk/WalkInDialog";
 import { ApiError, api, getDesk } from "@/lib/client/api";
 import { printBadge } from "@/lib/client/print";
-import { beep } from "@/lib/client/sound";
+import { beep, unlockAudioOnFirstTouch } from "@/lib/client/sound";
 import { ticketColor, type AttendeeView, type CheckInResult, type EventConfig } from "@/lib/types";
 
 /** Heuristic: single token with a digit/dash/slash looks like a scanned code, not a name. */
@@ -38,6 +38,7 @@ export function DeskStation() {
       setSound(localStorage.getItem("checkin:sound") !== "off");
     } catch {}
     api<{ config: EventConfig }>("/api/dashboard").then((d) => setConfig(d.config)).catch(() => {});
+    return unlockAudioOnFirstTouch();
   }, []);
 
   const trimmed = query.trim();
