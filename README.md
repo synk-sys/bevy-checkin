@@ -27,7 +27,7 @@ Until you set up accounts (see [Sign-in](#sign-in)), go to **`/admin/login`** an
 2. **Admin → Printable test tickets** shows QR codes you can hold up to the camera.
 3. Sign out, then sign in at **`/login`** with password **`checkin`** as a volunteer. The **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
-Volunteers name their desk ("Desk 2") after signing in; the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+Volunteers enter their desk name ("Desk 2") on the sign-in page; the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
 
 Admins don't scan tickets: they have their own sign-in page at **`/admin/login`** (volunteers are turned away there), aren't asked for a desk and don't get the Desk page. They see Dashboard, Attendees and Admin. An undo by an admin is recorded under **Admin**.
 

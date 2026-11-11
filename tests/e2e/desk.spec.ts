@@ -116,6 +116,7 @@ test("admin sign-in page is labelled Admin and turns volunteers away", async ({ 
   await expect(page.getByText("Admin", { exact: true })).toBeVisible();
   await expect(page.getByText("Start your shift")).toHaveCount(0);
   await expect(page.getByText("Check-in Desk")).toHaveCount(0);
+  await expect(page.getByLabel("Desk name")).toHaveCount(0);
   await page.getByLabel("Your name").fill("Sam Staff");
   await page.getByLabel("Password").fill("staff-e2e");
   await page.getByRole("button", { name: "Sign in" }).click();
