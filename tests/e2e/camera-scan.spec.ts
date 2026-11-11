@@ -52,7 +52,13 @@ test("holding a ticket QR up to the camera checks the attendee in", async ({ pag
   const result = page.getByTestId("result");
   await expect(result).toHaveAttribute("data-status", "checked_in", { timeout: 20_000 });
   await expect(result).toContainText(`Welcome, ${target.firstName}!`);
-  // The same QR stays in view: it must not be re-submitted as a duplicate within the cooldown.
+  // A successful check-in closes the camera, so the same QR can't be submitted again.
+  await expect(page.locator("video")).toHaveCount(0);
+  await expect(page.getByTestId("camera-toggle")).toHaveText(/Camera scan/);
   await page.waitForTimeout(1500);
   await expect(result).toHaveAttribute("data-status", "checked_in");
+  // Scanning the same ticket again shows "already checked in" and closes the camera too.
+  await page.getByTestId("camera-toggle").click();
+  await expect(result).toHaveAttribute("data-status", "already", { timeout: 20_000 });
+  await expect(page.locator("video")).toHaveCount(0);
 });

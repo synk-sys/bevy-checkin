@@ -60,15 +60,18 @@ export function DeskStation() {
   );
 
   const checkIn = useCallback(
-    async (body: { code: string } | { attendeeId: string }) => {
+    async (body: { code: string } | { attendeeId: string }): Promise<CheckInResult | null> => {
       setBusy(true);
       setError(null);
       try {
-        show(await api<CheckInResult>("/api/checkin", { method: "POST", body: JSON.stringify(body), allow404: true }));
+        const r = await api<CheckInResult>("/api/checkin", { method: "POST", body: JSON.stringify(body), allow404: true });
+        show(r);
         setQuery("");
+        return r;
       } catch (e) {
         setError(e instanceof ApiError ? e.message : "Check-in failed");
         beep("error");
+        return null;
       } finally {
         setBusy(false);
         refocus();
@@ -76,6 +79,12 @@ export function DeskStation() {
     },
     [show],
   );
+
+  // Camera scan: close the camera once the ticket is found (checked in now or already); keep it open to retry otherwise.
+  const scanned = async (code: string) => {
+    const status = (await checkIn({ code }))?.status;
+    if (status === "checked_in" || status === "already") setCamera(false);
+  };
 
   // Live search as staff type (debounced).
   useEffect(() => {
@@ -135,7 +144,7 @@ export function DeskStation() {
           </div>
         </div>
 
-        {camera && <QrScanner onScan={(code) => checkIn({ code })} paused={busy} />}
+        {camera && <QrScanner onScan={scanned} paused={busy} />}
 
         <form onSubmit={onSubmit} role="search" className="relative">
           <label htmlFor="scan" className="sr-only">
