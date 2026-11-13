@@ -1,7 +1,7 @@
 # Event-day checklist
 
 ## The day before
-- [ ] Run **Admin → Sync from Bevy**. Check that the attendee count matches the Bevy dashboard.
+- [ ] Export the attendee CSV from Bevy and run **Admin → Import CSV**. Check that the attendee count matches the Bevy dashboard. Re-import just before doors open to pick up late registrations.
 - [ ] Each desk: open the app, sign in, name the desk ("Desk 1", "Desk 2", …) and allow camera access.
 - [ ] Test the badge printer: load 4×3″ stock, print one badge, and in the print dialog set margins to *None* and scale to 100%.
 - [ ] Decide whether to use **Auto-print badge on check-in** (Admin → Desk settings).

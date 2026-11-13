@@ -43,7 +43,8 @@ function pick(obj: unknown, paths: string[]): string {
 function truthy(obj: unknown, paths: string[]): boolean {
   for (const p of paths) {
     const v = get(obj, p);
-    if (v === true || v === 1 || v === "true" || v === "yes") return true;
+    if (v === true || v === 1) return true;
+    if (typeof v === "string" && /^(true|yes|y|1|checked in|attended)$/i.test(v.trim())) return true;
     if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return true; // a check-in timestamp
     if (typeof v === "number" && v > 0 && p.includes("count")) return true;
   }
@@ -56,14 +57,14 @@ export function normalizeBevyAttendee(raw: unknown): NormalizedAttendee | null {
   let firstName = pick(raw, ["first_name", "firstName", "given_name", "user.first_name", "user.firstName", "profile.first_name"]);
   let lastName = pick(raw, ["last_name", "lastName", "family_name", "surname", "user.last_name", "user.lastName", "profile.last_name"]);
   if (!firstName && !lastName) {
-    const full = pick(raw, ["name", "full_name", "fullName", "display_name", "user.name", "user.full_name"]);
+    const full = pick(raw, ["name", "full_name", "fullName", "display_name", "user.name", "user.full_name", "attendee_name", "attendee"]);
     const [f, ...rest] = full.split(" ");
     firstName = f ?? "";
     lastName = rest.join(" ");
   }
-  const email = pick(raw, ["email", "email_address", "emailAddress", "user.email", "profile.email"]).toLowerCase();
+  const email = pick(raw, ["email", "email_address", "emailAddress", "attendee_email", "user.email", "profile.email"]).toLowerCase();
   const ticketCode =
-    pick(raw, ["ticket_code", "ticketCode", "ticket_number", "ticketNumber", "barcode", "qr_code", "qrCode", "code", "order_id", "orderId", "ticket.code", "ticket.id"]) ||
+    pick(raw, ["ticket_code", "ticketCode", "ticket_number", "ticketNumber", "barcode", "qr_code", "qrCode", "code", "ticket_id", "ticketId", "order_id", "orderId", "ticket.code", "ticket.id"]) ||
     bevyId;
   if (!bevyId && !ticketCode) return null;
   if (!firstName && !lastName && !email) return null;
@@ -75,8 +76,8 @@ export function normalizeBevyAttendee(raw: unknown): NormalizedAttendee | null {
     email,
     company: pick(raw, ["company", "company_name", "organization", "organisation", "user.company", "profile.company", "employer"]),
     title: pick(raw, ["title", "job_title", "jobTitle", "user.title", "profile.title"]),
-    ticketType: pick(raw, ["ticket_type", "ticketType", "ticket.title", "ticket.name", "ticket_name", "ticket_title", "ticket", "registration_type"]) || "General",
-    checkedIn: truthy(raw, ["checked_in", "checkedIn", "is_checked_in", "checkin_time", "checked_in_at", "checkedInAt", "checkin_count"]),
+    ticketType: pick(raw, ["ticket_type", "ticketType", "ticket.title", "ticket.name", "ticket_name", "ticket_title", "ticket", "registration_type", "ticket_class"]) || "General",
+    checkedIn: truthy(raw, ["checked_in", "checkedIn", "is_checked_in", "checkin_time", "checked_in_at", "checkedInAt", "checkin_count", "attended", "check_in_status", "checked_in_status"]),
   };
 }
 

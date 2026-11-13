@@ -10,7 +10,8 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
 - **Live dashboard:** shows arrival rate, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
 - **Attendee list:** an admin-only view with CSV export and undo.
 - **Data sources:**
-  - the Bevy API, with a configurable endpoint and pagination
+  - **CSV import** of Bevy's attendee export (or any sheet with name/email/ticket columns)
+  - the Bevy API, with a configurable endpoint and pagination, if Bevy grants API access
   - Bevy webhooks
   - built-in **demo data** for training volunteers
 
@@ -46,7 +47,23 @@ SESSION_SECRET=any-long-random-string
 - Once any account is listed, the `admin` / `checkin` fallback stops working. That fallback never works on a deployed server.
 - To add, remove or change someone, edit the list and restart the server (or redeploy). A session lasts 14 hours. Removing someone from the list doesn't end a session they've already started; change `SESSION_SECRET` to sign everyone out.
 
-## Bevy integration
+## Importing attendees (CSV)
+
+1. In Bevy, open your event's attendee list and export it as CSV.
+2. Sign in to **Admin** and, under **Attendee list**, choose the file and press **Import CSV**.
+
+Import again whenever new people register. People already in the list are updated rather than duplicated, and check-ins made at the desk are kept. You can also import while the doors are open.
+
+Columns are matched by name, ignoring capitals and spacing:
+- **First Name / Last Name** (or a single **Name** column)
+- **Email**
+- **Ticket ID / Ticket Code / Barcode**: what the ticket QR code contains, so scans can find the person
+- **Ticket Title / Ticket Type**
+- **Checked In** (optional)
+
+If there's no ticket column, people are keyed by email and found at the desk by name search. If no columns match at all, the error lists the column names the file has, so you can add them to `src/lib/server/bevy.ts`. The file limit is 4 MB, which is tens of thousands of rows.
+
+## Bevy API (optional)
 
 Bevy doesn't publish a public API reference; access is arranged per organization. The integration is therefore configurable rather than hard-coded:
 
@@ -78,10 +95,10 @@ Attendee data is stored in **Supabase** Postgres. Supabase doesn't host Next.js 
    | `STAFF_USERS` | e.g. `Priya:pass-2,Sam:pass-3` |
    | `SESSION_SECRET` | any long random string (`openssl rand -base64 32`) |
    | `NEXT_PUBLIC_EVENT_NAME` | your event's name |
-   | `BEVY_API_BASE_URL`, `BEVY_API_TOKEN`, `BEVY_EVENT_ID` | from Bevy (see above) |
+   | `BEVY_API_BASE_URL`, `BEVY_API_TOKEN`, `BEVY_EVENT_ID` | optional, only if you have Bevy API access |
 
    Under **Settings → Functions**, set the region closest to your Supabase project's region.
-3. Deploy, sign in as an admin and run **Admin → Sync from Bevy**.
+3. Deploy, sign in as an admin and **Import CSV** under **Admin → Attendee list**.
 
 To change who can sign in later, edit the variables in Vercel and redeploy.
 
@@ -90,8 +107,8 @@ The table has row level security turned on with no policies, so Supabase's publi
 ## Tests
 
 ```bash
-npm test                          # 24 unit/API tests
-npm run build && npm run test:e2e # 12 Playwright tests, incl. a real camera QR scan
+npm test                          # 33 unit/API tests
+npm run build && npm run test:e2e # 13 Playwright tests, incl. a real camera QR scan
 ```
 
 Both run on the in-memory store. To run them against a real Postgres, start a **throwaway** one (the tests delete its `checkin_docs` table):
@@ -107,10 +124,12 @@ The unit and API tests cover:
 - a 150-person burst across desks
 - matching ticket codes inside URLs
 - undo, search, walk-ins, and preserving check-ins on re-import
+- CSV parsing and import (quotes, BOM, semicolons, Bevy column names, re-import keeping check-ins)
 - the Bevy normalizer and pagination, plus the token-leak guard
 - the webhook secret, role-based access, cross-site request blocking and CSV formula escaping
 
 The end-to-end tests cover:
+- importing a CSV, then checking someone from it in
 - USB-scanner entry
 - search and check-in
 - walk-ins

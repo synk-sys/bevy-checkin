@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CloudDownload, Loader2, QrCode } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CloudDownload, FileUp, Loader2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ export function AdminPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [demoCount, setDemoCount] = useState(240);
+  const [file, setFile] = useState<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = () =>
     api<{ config: EventConfig; bevyConfigured: boolean }>("/api/dashboard").then((d) => {
@@ -53,6 +55,19 @@ export function AdminPanel() {
       return `Imported: ${r.created} new, ${r.updated} updated`;
     });
 
+  const importCsv = () =>
+    file &&
+    run("csv", async () => {
+      const r = await api<{ created: number; updated: number; skipped: number }>("/api/admin/import", {
+        method: "POST",
+        body: await file.text(),
+        headers: { "content-type": "text/csv" },
+      });
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+      return `Imported: ${r.created} new, ${r.updated} updated${r.skipped ? ` · ${r.skipped} rows skipped (no name, email or ticket)` : ""}`;
+    });
+
   return (
     <div className="space-y-5">
       <h1 className="font-display text-2xl font-bold">Admin</h1>
@@ -63,27 +78,38 @@ export function AdminPanel() {
       <div className="grid gap-5 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Bevy</CardTitle>
+            <CardTitle>Attendee list</CardTitle>
             <CardDescription>
-              {bevyConfigured
-                ? "Pull the latest registrations from the Bevy API. Check-ins made here are never overwritten by a sync."
-                : "Not configured. Set BEVY_API_BASE_URL, BEVY_API_TOKEN and BEVY_EVENT_ID (see .env.example)."}
+              Export the attendee list from Bevy as a CSV file and upload it here. Upload again whenever new people register: existing people are
+              updated, not duplicated, and check-ins made at the desk are kept.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button onClick={() => sync({ source: "bevy" }, "bevy")} disabled={!bevyConfigured || !!busy} data-testid="sync-bevy">
-              {busy === "bevy" ? <Loader2 className="animate-spin" /> : <CloudDownload />} Sync from Bevy
+            <div className="space-y-1.5">
+              <Label htmlFor="csvFile">CSV file</Label>
+              <Input
+                id="csvFile"
+                ref={fileRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                data-testid="csv-file"
+              />
+            </div>
+            <Button onClick={importCsv} disabled={!file || !!busy} data-testid="import-csv">
+              {busy === "csv" ? <Loader2 className="animate-spin" /> : <FileUp />} Import CSV
             </Button>
             {config?.lastSyncAt && (
               <p className="text-sm text-muted-foreground">
-                Last sync {new Date(config.lastSyncAt).toLocaleString()} · {config.lastSyncCount} attendees
+                Last import {new Date(config.lastSyncAt).toLocaleString()} · {config.lastSyncCount} attendees
               </p>
             )}
             {config?.lastSyncError && <p className="text-sm text-destructive">Last error: {config.lastSyncError}</p>}
-            <p className="text-xs text-muted-foreground">
-              Webhooks: point Bevy attendee webhooks at <code className="rounded bg-muted px-1">/api/bevy/webhook</code> with header{" "}
-              <code className="rounded bg-muted px-1">x-webhook-secret</code> = BEVY_WEBHOOK_SECRET.
-            </p>
+            {bevyConfigured && (
+              <Button variant="outline" onClick={() => sync({ source: "bevy" }, "bevy")} disabled={!!busy} data-testid="sync-bevy">
+                {busy === "bevy" ? <Loader2 className="animate-spin" /> : <CloudDownload />} Sync from Bevy API
+              </Button>
+            )}
           </CardContent>
         </Card>
 

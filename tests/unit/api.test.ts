@@ -10,6 +10,7 @@ import { GET as search } from "@/app/api/attendees/search/route";
 import { GET as dashboard } from "@/app/api/dashboard/route";
 import { GET as exportCsv } from "@/app/api/admin/export/route";
 import { POST as sync } from "@/app/api/admin/sync/route";
+import { POST as importCsv } from "@/app/api/admin/import/route";
 import { POST as webhook } from "@/app/api/bevy/webhook/route";
 
 const BASE = "http://localhost:3000";
@@ -121,6 +122,40 @@ describe("access control", () => {
     const cookie = await signIn("checkin");
     const res = await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: "x" }, headers: { origin: "https://evil.test", host: "localhost:3000" } }), undefined);
     expect(res.status).toBe(403);
+  });
+});
+
+describe("CSV import", () => {
+  const upload = (cookie: string, csv: string) =>
+    importCsv(new NextRequest(BASE + "/api/admin/import", { method: "POST", body: csv, headers: { cookie, "content-type": "text/csv" } }), undefined);
+  const csv = "First Name,Last Name,Email,Ticket Type,Ticket Code\nPriya,Shah,priya@x.com,General,CSV-1\nSam,Lee,sam@x.com,Student,CSV-2\n,,,,\n";
+
+  it("is admin only", async () => {
+    expect((await upload(await signIn("checkin"), csv)).status).toBe(403);
+  });
+
+  it("imports attendees, then updates them on re-import without losing check-ins", async () => {
+    const cookie = await signIn("admin");
+    expect(await (await upload(cookie, csv)).json()).toMatchObject({ created: 2, updated: 0, rows: 2 });
+    const scan = await (await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: "CSV-1" } }), undefined)).json();
+    expect(scan.status).toBe("checked_in");
+    const again = await upload(cookie, csv.replace("Sam,Lee", "Samuel,Lee") + "Ada,King,ada@x.com,General,CSV-3\n");
+    expect(await again.json()).toMatchObject({ created: 1, updated: 2 });
+    expect((await service.lookupByCode("CSV-1"))?.checkedIn).toBe(true);
+    expect((await service.lookupByCode("CSV-2"))?.firstName).toBe("Samuel");
+  });
+
+  it("accepts a plain Name/Email list without ticket codes", async () => {
+    const cookie = await signIn("admin");
+    expect(await (await upload(cookie, "Name,Email\nAda Lovelace,ada@x.com\n")).json()).toMatchObject({ created: 1, skipped: 0 });
+    const found = await (await search(req("/api/attendees/search?q=lovelace", { cookie }), undefined)).json();
+    expect(found.results[0]).toMatchObject({ firstName: "Ada", lastName: "Lovelace" });
+  });
+
+  it("explains which columns it found when nothing matches", async () => {
+    const res = await upload(await signIn("admin"), "Foo,Bar\n1,2\n");
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.message).toContain("Columns in this file: Foo, Bar");
   });
 });
 

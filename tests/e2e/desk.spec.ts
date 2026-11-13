@@ -141,3 +141,24 @@ test("desk works on a phone-sized screen", async ({ browser }) => {
   expect(overflow).toBeLessThanOrEqual(1);
   await ctx.close();
 });
+
+test("admin imports a Bevy CSV export and a volunteer checks someone from it in", async ({ page, browser }) => {
+  const code = `CSV-${Date.now()}`;
+  await signIn(page, "admin");
+  await page.getByTestId("csv-file").setInputFiles({
+    name: "attendees.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(`First Name,Last Name,Email,Ticket Title,Ticket ID\nGrace,Hopper,grace-${code}@x.com,Speaker,${code}\n`),
+  });
+  await page.getByTestId("import-csv").click();
+  await expect(page.getByText(/Imported: 1 new, 0 updated/)).toBeVisible();
+  await expect(page.getByText(/Last import .* attendees/)).toBeVisible();
+
+  const desk = await (await browser.newContext()).newPage();
+  await signIn(desk, "staff", "Desk 2");
+  await desk.getByTestId("scan-input").fill(code);
+  await desk.getByTestId("scan-input").press("Enter");
+  await expect(desk.getByTestId("result")).toHaveAttribute("data-status", "checked_in");
+  await expect(desk.getByTestId("result")).toContainText("Welcome, Grace!");
+  await desk.context().close();
+});
