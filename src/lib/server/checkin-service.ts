@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { codeCandidates, codeKey } from "@/lib/codes";
+import { codeAliases, codeCandidates, codeKey } from "@/lib/codes";
 import { clean, mapKey, searchKey, slotKey } from "@/lib/text";
 import {
   DEFAULT_CONFIG,
@@ -240,6 +240,7 @@ export class CheckinService {
     let updated = 0;
     const ops: WriteOp[] = [];
     const seenCodes = new Set<string>();
+    const aliases: [string, string[]][] = [];
     for (const n of list) {
       const id = safeId(source === "bevy" ? `bevy-${n.bevyId}` : n.bevyId);
       const existing = await this.db.get(P.attendee(id));
@@ -274,7 +275,15 @@ export class CheckinService {
         seenCodes.add(ck);
         ops.push({ path: P.ticket(ck), data: { attendeeId: id } });
       }
+      aliases.push([id, codeAliases(base.ticketCode)]);
     }
+    // Alternate scan keys go in after every real ticket code, so they never take over one.
+    for (const [id, list] of aliases)
+      for (const k of list)
+        if (!seenCodes.has(k)) {
+          seenCodes.add(k);
+          ops.push({ path: P.ticket(k), data: { attendeeId: id } });
+        }
     await this.db.writeBatch(ops);
     await this.recountStats();
     return { created, updated };

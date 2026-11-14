@@ -36,3 +36,12 @@ describe("CSV import", () => {
     expect(sam).toMatchObject({ ticketCode: "T-101", ticketType: "Student", checkedIn: false });
   });
 });
+
+describe("ticket code aliases", () => {
+  it("indexes Bevy ticket numbers by their trailing digits", async () => {
+    const { codeAliases } = await import("@/lib/codes");
+    expect(codeAliases("GOOGA263469041")).toEqual(["263469041", "63469041", "3469041"]);
+    expect(codeAliases("WALK-AB12CD")).toEqual([]);
+    expect(codeAliases("ABC123")).toEqual([]);
+  });
+});

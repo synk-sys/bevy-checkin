@@ -31,3 +31,19 @@ export function codeCandidates(raw: string): string[] {
   if (s.includes(":") && !/^https?:/i.test(s)) add(s.split(":").pop());
   return [...out];
 }
+
+/**
+ * Extra keys a ticket can be scanned by. Bevy ticket numbers look like
+ * "GOOGA263469041" while the ticket's QR code holds "<event id>:3469041":
+ * just the trailing digits. So a letters-then-digits ticket number is also
+ * indexed by each tail of its digits that is 7+ long (long enough that two
+ * tickets of one event can't share one).
+ */
+export function codeAliases(ticketCode: string): string[] {
+  const m = /^[a-z]+(\d{7,})$/.exec(codeKey(ticketCode));
+  if (!m) return [];
+  const digits = m[1];
+  const out: string[] = [];
+  for (let len = digits.length; len >= 7; len--) out.push(digits.slice(-len));
+  return out;
+}

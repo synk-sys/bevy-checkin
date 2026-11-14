@@ -145,6 +145,21 @@ describe("CSV import", () => {
     expect((await service.lookupByCode("CSV-2"))?.firstName).toBe("Samuel");
   });
 
+  it("matches Bevy ticket QR codes (event id : ticket digits) to the CSV's ticket numbers", async () => {
+    const cookie = await signIn("admin");
+    const bevy =
+      "Order number,Ticket number,First Name,Last Name,Email,Ticket title,Checkin Date (UTC)\n" +
+      "GOOGE260000001,GOOGA261234567,Test,Person,test.person@x.com,Volunteers,\n" +
+      "GOOGE260000002,GOOGA261234568,Other,Person,other.person@x.com,Speakers,\n";
+    expect(await (await upload(cookie, bevy)).json()).toMatchObject({ created: 2 });
+    const scan = await (await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: "100001:1234567" } }), undefined)).json();
+    expect(scan.status).toBe("checked_in");
+    expect(scan.attendee).toMatchObject({ firstName: "Test", ticketType: "Volunteers" });
+    // The full ticket number (typed or printed) still works too.
+    const typed = await (await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: "GOOGA261234568" } }), undefined)).json();
+    expect(typed.attendee.firstName).toBe("Other");
+  });
+
   it("accepts a plain Name/Email list without ticket codes", async () => {
     const cookie = await signIn("admin");
     expect(await (await upload(cookie, "Name,Email\nAda Lovelace,ada@x.com\n")).json()).toMatchObject({ created: 1, skipped: 0 });
