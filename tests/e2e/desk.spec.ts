@@ -88,6 +88,10 @@ test("dashboard updates live when another desk checks someone in", async ({ page
   await other.close();
 
   await expect(stat).toHaveText(String(before + 1), { timeout: 10_000 });
+  // Every desk is listed, and this check-in counts under Desk 6.
+  const desks = page.getByTestId("desk-count");
+  await expect(desks.filter({ hasText: "Desk 1" })).toBeVisible();
+  await expect(desks.filter({ hasText: "Desk 6" })).not.toHaveText(/Desk 6\s*0$/);
   await expect(page.getByTestId("recent-feed")).toContainText(`${a.firstName} ${a.lastName}`);
 });
 

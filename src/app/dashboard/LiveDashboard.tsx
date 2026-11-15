@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePoll } from "@/hooks/usePoll";
-import { api } from "@/lib/client/api";
+import { DESKS, api } from "@/lib/client/api";
 import { ticketColor, type CheckinLogEntry, type EventConfig, type Stats } from "@/lib/types";
 import { slotKey } from "@/lib/text";
 
@@ -33,7 +33,9 @@ export function LiveDashboard() {
   const maxSlot = Math.max(1, ...slots.map((s) => s.count));
   const lastHour = slots.slice(-6).reduce((a, s) => a + s.count, 0);
   const types = Object.entries(stats.byType).sort((a, b) => b[1].total - a[1].total);
-  const desks = Object.entries(stats.byDesk).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  // All six desks, even before their first check-in, then anything else (admin check-ins, older desk names).
+  const others = Object.entries(stats.byDesk).filter(([d, n]) => n > 0 && !(DESKS as readonly string[]).includes(d));
+  const desks: [string, number][] = [...DESKS.map((d): [string, number] => [d, stats.byDesk[d] ?? 0]), ...others];
 
   return (
     <div className="space-y-5">
@@ -137,9 +139,8 @@ export function LiveDashboard() {
             <CardTitle>By desk</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {desks.length === 0 && <p className="text-muted-foreground">—</p>}
             {desks.map(([d, n]) => (
-              <div key={d} className="flex justify-between">
+              <div key={d} className="flex justify-between" data-testid="desk-count">
                 <span>{d}</span>
                 <span className="font-semibold tabular-nums">{n}</span>
               </div>

@@ -91,6 +91,14 @@ describe("access control", () => {
     expect(body.attendee.desk).toBe("Admin");
   });
 
+  it("counts each check-in under the volunteer's desk on the dashboard", async () => {
+    const cookie = await signIn("checkin");
+    const [a, b] = demoAttendees(30);
+    for (const t of [a, b]) await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: t.ticketCode }, headers: { "x-desk": "Desk 2" } }), undefined);
+    const { stats } = await (await dashboard(req("/api/dashboard", { cookie }), undefined)).json();
+    expect(stats.byDesk).toEqual({ "Desk 2": 2 });
+  });
+
   it("admins can export CSV with formula injection neutralised", async () => {
     await service.createWalkIn({ firstName: "=HYPERLINK(1)", lastName: "", email: "" }, { desk: "D", by: "x" }, true);
     const cookie = await signIn("admin");
