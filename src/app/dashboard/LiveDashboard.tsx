@@ -60,6 +60,28 @@ export function LiveDashboard() {
         <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${pct}%` }} />
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>By desk</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {desks.map(([d, n]) => (
+              <li key={d} className="rounded-xl border bg-muted/40 p-3 text-center" data-testid="desk-count">
+                <span className="block text-xs text-muted-foreground">{d}</span>
+                <span className="font-display text-2xl font-bold tabular-nums">{n}</span>
+              </li>
+            ))}
+          </ul>
+          {config.lastSyncAt && (
+            <p className="text-xs text-muted-foreground">
+              Last import {fmtTime(config.lastSyncAt)} · {config.lastSyncCount} attendees
+            </p>
+          )}
+          {config.lastSyncError && <p className="text-xs text-destructive">Last import error: {config.lastSyncError}</p>}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader>
@@ -110,7 +132,7 @@ export function LiveDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <div>
         <Card>
           <CardHeader>
             <CardTitle>Recent activity</CardTitle>
@@ -132,27 +154,6 @@ export function LiveDashboard() {
                 ))}
               </ul>
             )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>By desk</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {desks.map(([d, n]) => (
-              <div key={d} className="flex justify-between" data-testid="desk-count">
-                <span>{d}</span>
-                <span className="font-semibold tabular-nums">{n}</span>
-              </div>
-            ))}
-            <p className="border-t pt-3 text-xs text-muted-foreground">
-              {data.bevyConfigured
-                ? config.lastSyncAt
-                  ? `Last Bevy sync ${fmtTime(config.lastSyncAt)} · ${config.lastSyncCount} attendees`
-                  : "Bevy connected · not synced yet"
-                : "Bevy API not configured (using imported/demo data)"}
-              {config.lastSyncError && <span className="block text-destructive">Last sync error: {config.lastSyncError}</span>}
-            </p>
           </CardContent>
         </Card>
       </div>
