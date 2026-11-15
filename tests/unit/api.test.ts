@@ -179,6 +179,19 @@ describe("swag", () => {
     expect((await service.recountStats()).swagCollected).toBe(1);
   });
 
+  it("is taken back when the check-in is undone", async () => {
+    const a = (await service.lookupByCode(demoAttendees(30)[7].ticketCode))!;
+    await service.checkIn(a.id, { desk: "Desk 2", by: "Desk 2" });
+    await service.collectSwag(a.id, { desk: "Desk 2", by: "Desk 2" });
+    expect((await service.getStats()).swagCollected).toBe(1);
+    const undone = await service.undoCheckIn(a.id, { desk: "Admin", by: "Ada" });
+    expect(undone).toMatchObject({ checkedIn: false, swagCollectedAt: null, swagDesk: null });
+    expect((await service.getStats()).swagCollected).toBe(0);
+    expect((await service.recountStats()).swagCollected).toBe(0);
+    // And it can't be collected again until they're checked back in.
+    await expect(service.collectSwag(a.id, { desk: "Desk 2", by: "Desk 2" })).rejects.toThrow("Check");
+  });
+
   it("needs a signed-in desk", async () => {
     expect((await collectSwag(...swagReq("", "x"))).status).toBe(401);
   });

@@ -124,7 +124,7 @@ export function AttendeeTable() {
                   ) : (
                     <Badge variant="secondary">Not yet</Badge>
                   )}
-                  {a.swagCollectedAt && (
+                  {a.checkedIn && a.swagCollectedAt && (
                     <Badge variant="outline" className="ml-1">
                       Swag
                     </Badge>

@@ -17,7 +17,7 @@ const COLUMNS: [string, (r: AttendeeView) => unknown][] = [
   ["Order Number", (r) => r.orderNumber],
   ["Ticket Number", (r) => r.ticketCode],
   ["Checked In", (r) => (r.checkedIn ? "Yes" : "No")],
-  ["Swag Collected", (r) => (r.swagCollectedAt ? "Yes" : "No")],
+  ["Swag Collected", (r) => (r.checkedIn && r.swagCollectedAt ? "Yes" : "No")],
   ["Desk", (r) => r.desk],
 ];
 

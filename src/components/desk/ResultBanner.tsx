@@ -73,7 +73,7 @@ export function ResultBanner({
               {a.checkedInBy && a.checkedInBy !== a.desk && ` · by ${a.checkedInBy}`}
             </span>
           )}
-          {a.swagCollectedAt && (
+          {a.checkedIn && a.swagCollectedAt && (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-medium text-emerald-800" data-testid="swag-status">
               <Gift className="size-3.5" aria-hidden="true" /> Swag collected {time(a.swagCollectedAt)}
               {a.swagDesk && ` · ${a.swagDesk}`}
@@ -87,7 +87,7 @@ export function ResultBanner({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        {onSwag && !a.swagCollectedAt && (
+        {onSwag && a.checkedIn && !a.swagCollectedAt && (
           <Button size="lg" variant="outline" onClick={() => onSwag(a.id)} disabled={busy} data-testid="swag-button">
             <Gift /> Swag collected
           </Button>

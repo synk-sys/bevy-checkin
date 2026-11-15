@@ -183,7 +183,8 @@ export class CheckinService {
       if (!d) throw new CheckinError("NOT_FOUND", "Attendee not found");
       const a = asAttendee(id, d);
       if (!a.checkedIn) return { changed: false, attendee: a };
-      tx.merge(P.attendee(id), { checkedIn: false, checkedInAt: null, checkedInBy: null, desk: null, updatedAt: now });
+      // Swag is only for checked-in people, so undoing the check-in takes the swag pickup back too.
+      tx.merge(P.attendee(id), { checkedIn: false, checkedInAt: null, checkedInBy: null, desk: null, swagCollectedAt: null, swagDesk: null, updatedAt: now });
       tx.set(`checkins/${now.getTime()}-${randomBytes(4).toString("hex")}`, {
         attendeeId: id,
         name: `${a.firstName} ${a.lastName}`.trim(),
@@ -193,13 +194,19 @@ export class CheckinService {
         by: ctx.by,
         at: now,
       });
-      return { changed: true, attendee: { ...a, checkedIn: false, checkedInAt: null, checkedInBy: null, desk: null }, prevDesk: a.desk };
+      return {
+        changed: true,
+        attendee: { ...a, checkedIn: false, checkedInAt: null, checkedInBy: null, desk: null, swagCollectedAt: null, swagDesk: null },
+        prevDesk: a.desk,
+        hadSwag: !!a.swagCollectedAt,
+      };
     });
     if (res.changed) {
       await this.db.increment(P.stats, {
         checkedIn: -1,
         [`byType.${mapKey(res.attendee.ticketType)}.checkedIn`]: -1,
         [`byDesk.${mapKey(res.prevDesk ?? "unknown")}`]: -1,
+        ...(res.hadSwag ? { swagCollected: -1 } : {}),
       });
       this.statsCache = null;
     }
@@ -419,7 +426,7 @@ export class CheckinService {
       s.byType[t].total++;
       if (a.source === "walkin") s.walkins++;
       if (a.badgePrintedAt) s.badgesPrinted++;
-      if (a.swagCollectedAt) s.swagCollected++;
+      if (a.checkedIn && a.swagCollectedAt) s.swagCollected++;
       if (a.checkedIn) {
         s.checkedIn++;
         s.byType[t].checkedIn++;
