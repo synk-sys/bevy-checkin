@@ -64,7 +64,7 @@ export function LiveDashboard() {
         <CardHeader>
           <CardTitle>By desk</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {desks.map(([d, n]) => (
               <li key={d} className="rounded-xl border bg-muted/40 p-3 text-center" data-testid="desk-count">
@@ -73,12 +73,6 @@ export function LiveDashboard() {
               </li>
             ))}
           </ul>
-          {config.lastSyncAt && (
-            <p className="text-xs text-muted-foreground">
-              Last import {fmtTime(config.lastSyncAt)} · {config.lastSyncCount} attendees
-            </p>
-          )}
-          {config.lastSyncError && <p className="text-xs text-destructive">Last import error: {config.lastSyncError}</p>}
         </CardContent>
       </Card>
 
