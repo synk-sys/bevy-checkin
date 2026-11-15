@@ -19,7 +19,7 @@ function safeEqual(a: string, b: string) {
   return ab.length === bb.length && timingSafeEqual(ab, bb);
 }
 
-/** Staff (check-in volunteers) and admins, signed in with a per-person password; the session is a signed cookie. */
+/** Desks (volunteers sign in as "Desk 1"…"Desk 6", each with its own password) and admins (per person); the session is a signed cookie. */
 export async function getSession(req: NextRequest): Promise<Session | null> {
   const raw = req.cookies.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
@@ -88,10 +88,13 @@ export function issueSession(res: NextResponse, session: Session) {
   });
 }
 
-/** Label recorded with an action. Admins have no desk; staff send theirs (x-desk header), sanitised. */
+/**
+ * Desk recorded with an action. Volunteers sign in as a desk ("Desk 3" with that desk's
+ * password), so a check-in counts for the desk whose password was used. Admins have no desk.
+ */
 export const ADMIN_DESK = "Admin";
 
-export function deskFrom(req: NextRequest, session: Session) {
+export function deskFrom(_req: NextRequest, session: Session) {
   if (session.role === "admin") return ADMIN_DESK;
-  return clean(req.headers.get("x-desk") ?? "", 32).replace(/[^\w \-#]/g, "") || "Desk";
+  return clean(session.name, 32).replace(/[^\w \-#]/g, "") || "Desk";
 }

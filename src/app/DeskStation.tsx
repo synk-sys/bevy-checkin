@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { QrScanner } from "@/components/desk/QrScanner";
 import { ResultBanner } from "@/components/desk/ResultBanner";
 import { WalkInDialog } from "@/components/desk/WalkInDialog";
-import { ApiError, api, getDesk } from "@/lib/client/api";
+import { useSession } from "@/hooks/useSession";
+import { ApiError, api } from "@/lib/client/api";
 import { printBadge } from "@/lib/client/print";
 import { beep, unlockAudioOnFirstTouch } from "@/lib/client/sound";
 import { ticketColor, type AttendeeView, type CheckInResult, type EventConfig } from "@/lib/types";
@@ -27,14 +28,14 @@ export function DeskStation() {
   const [recent, setRecent] = useState<CheckInResult[]>([]);
   const [sound, setSound] = useState(true);
   const [config, setConfig] = useState<EventConfig | null>(null);
-  const [desk, setDeskLabel] = useState("Desk");
+  // Volunteers sign in as their desk, so the session name is the desk.
+  const desk = useSession().session?.name ?? "Desk";
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Browser-only values, read after hydration.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDeskLabel(getDesk());
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSound(localStorage.getItem("checkin:sound") !== "off");
     } catch {}
     api<{ config: EventConfig }>("/api/dashboard").then((d) => setConfig(d.config)).catch(() => {});

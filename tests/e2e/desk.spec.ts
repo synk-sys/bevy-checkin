@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ownAddress, resetWithDemo, signIn, uncheckedAttendees } from "./helpers";
+import { deskPassword, ownAddress, resetWithDemo, signIn, uncheckedAttendees } from "./helpers";
 
 test.describe.serial("check-in desk", () => {
   test("USB-scanner style code entry checks in once, then warns on repeat", async ({ page }) => {
@@ -121,8 +121,8 @@ test("admin sign-in page is labelled Admin and turns volunteers away", async ({ 
   await expect(page.getByText("Start your shift")).toHaveCount(0);
   await expect(page.getByText("Check-in Desk")).toHaveCount(0);
   await expect(page.getByRole("radiogroup", { name: "Desk" })).toHaveCount(0);
-  await page.getByLabel("Your name").fill("Sam Staff");
-  await page.getByLabel("Password").fill("staff-e2e");
+  await page.getByLabel("Your name").fill("Desk 1");
+  await page.getByLabel("Password").fill(deskPassword("Desk 1"));
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("This sign-in is for admins")).toBeVisible();
   await page.getByLabel("Your name").fill("Ada Admin");
@@ -191,4 +191,27 @@ test("volunteers pick one of the six desks, and the device remembers it", async 
   await page.request.delete("/api/session");
   await page.goto("/login");
   await expect(page.getByRole("radio", { name: "Desk 4", exact: true })).toHaveAttribute("aria-checked", "true");
+});
+
+test("volunteers sign in with their desk's password, with no name, and check-ins count for that desk", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto("/login");
+  await expect(page.getByLabel("Your name")).toHaveCount(0);
+  // Another desk's password doesn't work.
+  await page.getByRole("radio", { name: "Desk 2", exact: true }).click();
+  await expect(page.getByLabel("Desk 2 password")).toBeVisible();
+  await page.getByLabel("Desk 2 password").fill(deskPassword("Desk 5"));
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("That isn't the password for Desk 2.")).toBeVisible();
+  // Its own password does, and the check-in is recorded under Desk 2.
+  await page.getByLabel("Desk 2 password").fill(deskPassword("Desk 2"));
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByTestId("scan-input")).toBeVisible();
+  await expect(page.getByText("Desk 2 · Staff")).toBeVisible();
+  const [a] = await uncheckedAttendees(page);
+  await page.getByTestId("scan-input").fill(a.ticketCode);
+  await page.getByTestId("scan-input").press("Enter");
+  await expect(page.getByTestId("result")).toHaveAttribute("data-status", "checked_in");
+  const recorded = await (await page.request.get(`/api/attendees/search?q=${encodeURIComponent(a.ticketCode)}`)).json();
+  expect(recorded.results[0]).toMatchObject({ desk: "Desk 2", checkedInBy: "Desk 2" });
 });

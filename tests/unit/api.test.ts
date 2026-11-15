@@ -51,13 +51,14 @@ describe("access control", () => {
   });
 
   it("staff can check in but cannot export or sync", async () => {
-    const cookie = await signIn("checkin");
+    const cookie = await signIn("checkin", "Desk 3");
     const code = demoAttendees(30)[0].ticketCode;
-    const res = await checkin(req("/api/checkin", { method: "POST", cookie, body: { code }, headers: { "x-desk": "Front <b>Desk</b>" } }), undefined);
+    // The desk comes from the sign-in, not from anything the browser sends.
+    const res = await checkin(req("/api/checkin", { method: "POST", cookie, body: { code }, headers: { "x-desk": "Desk 5" } }), undefined);
     const body = await res.json();
     expect(body.status).toBe("checked_in");
-    expect(body.attendee.checkedInBy).toBe("Alex");
-    expect(body.attendee.desk).toBe("Front bDeskb"); // sanitised desk label
+    expect(body.attendee.checkedInBy).toBe("Desk 3");
+    expect(body.attendee.desk).toBe("Desk 3");
     expect((await exportCsv(req("/api/admin/export", { cookie }), undefined)).status).toBe(403);
     expect((await sync(req("/api/admin/sync", { method: "POST", cookie, body: { source: "demo" } }), undefined)).status).toBe(403);
   });
@@ -92,9 +93,9 @@ describe("access control", () => {
   });
 
   it("counts each check-in under the volunteer's desk on the dashboard", async () => {
-    const cookie = await signIn("checkin");
+    const cookie = await signIn("checkin", "Desk 2");
     const [a, b] = demoAttendees(30);
-    for (const t of [a, b]) await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: t.ticketCode }, headers: { "x-desk": "Desk 2" } }), undefined);
+    for (const t of [a, b]) await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: t.ticketCode } }), undefined);
     const { stats } = await (await dashboard(req("/api/dashboard", { cookie }), undefined)).json();
     expect(stats.byDesk).toEqual({ "Desk 2": 2 });
   });
@@ -105,6 +106,18 @@ describe("access control", () => {
     const res = await exportCsv(req("/api/admin/export?status=in", { cookie }), undefined);
     const text = await res.text();
     expect(text).toContain("\"'=HYPERLINK(1)\"");
+  });
+
+  it("signs each desk in with its own password", async () => {
+    process.env.STAFF_USERS = "Desk 1:d1-pass,Desk 2:d2-pass";
+    try {
+      const attempt = (name: string, password: string) => login(loginReq({ password, name }));
+      expect(await (await attempt("Desk 2", "d2-pass")).json()).toEqual({ session: { role: "staff", name: "Desk 2" } });
+      expect((await attempt("Desk 2", "d1-pass")).status).toBe(401); // another desk's password
+      expect((await attempt("Desk 3", "d1-pass")).status).toBe(401); // a desk with no account
+    } finally {
+      delete process.env.STAFF_USERS;
+    }
   });
 
   it("signs each person in with their own password and role", async () => {

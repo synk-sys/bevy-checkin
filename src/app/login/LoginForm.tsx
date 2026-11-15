@@ -45,10 +45,12 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
     setError(null);
     if (!admin) setDesk(desk);
     try {
-      await api("/api/session", { method: "POST", body: JSON.stringify({ password, name: name.trim(), adminOnly: admin }) });
+      // Volunteers sign in as their desk: each desk has its own password.
+      await api("/api/session", { method: "POST", body: JSON.stringify({ password, name: admin ? name.trim() : desk, adminOnly: admin }) });
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sign-in failed");
+      if (!admin && err instanceof ApiError && err.status === 401) setError(`That isn't the password for ${desk}.`);
+      else setError(err instanceof ApiError ? err.message : "Sign-in failed");
     } finally {
       setBusy(false);
     }
@@ -61,15 +63,17 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
           <Logo label={admin ? "Admin" : undefined} />
           {!admin && <CardTitle className="pt-3">Start your shift</CardTitle>}
           <CardDescription className={admin ? "pt-3" : undefined}>
-            {admin ? "Sign in with your admin name and password." : "Enter your name, your desk and the password your event lead gave you."}
+            {admin ? "Sign in with your admin name and password." : "Pick your desk and enter that desk's password."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Your name</Label>
-              <Input id="name" autoComplete="username" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
+            {admin && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Your name</Label>
+                <Input id="name" autoComplete="username" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+            )}
             {!admin && (
               <fieldset className="space-y-2">
                 <legend className="text-sm leading-none font-medium">Desk</legend>
@@ -94,7 +98,7 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
               </fieldset>
             )}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{admin ? "Password" : `${desk} password`}</Label>
               <Input id="password" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             {error && (

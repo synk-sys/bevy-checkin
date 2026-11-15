@@ -6,13 +6,17 @@ export async function ownAddress(page: Page) {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.1.0.${++ip}` });
 }
 
-export async function signIn(page: Page, role: "staff" | "admin", desk = "Desk 1", name = role === "admin" ? "Ada Admin" : "Sam Staff") {
+/** Each desk's test password, e.g. "Desk 3" → "desk-3-e2e" (see playwright.config.ts). */
+export const deskPassword = (desk: string) => `${desk.toLowerCase().replace(/\s+/g, "-")}-e2e`;
+
+/** Volunteers sign in as a desk with that desk's password; admins with their name and password. */
+export async function signIn(page: Page, role: "staff" | "admin", desk = "Desk 1") {
   await ownAddress(page);
   // Admins use the admin sign-in page and land on the Admin page; volunteers land on the desk.
   await page.goto(role === "admin" ? "/admin/login" : "/login");
-  await page.getByLabel("Your name").fill(name);
-  if (role === "staff") await page.getByRole("radio", { name: desk, exact: true }).click();
-  await page.getByLabel("Password").fill(role === "admin" ? "admin-e2e" : "staff-e2e");
+  if (role === "admin") await page.getByLabel("Your name").fill("Ada Admin");
+  else await page.getByRole("radio", { name: desk, exact: true }).click();
+  await page.getByLabel("Password").fill(role === "admin" ? "admin-e2e" : deskPassword(desk));
   await page.getByRole("button", { name: "Sign in" }).click();
   if (role === "staff") {
     await expect(page.getByTestId("scan-input")).toBeVisible();

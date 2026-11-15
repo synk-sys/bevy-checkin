@@ -21,6 +21,6 @@ export default defineConfig({
     port: PORT,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { STAFF_USERS: "Sam Staff:staff-e2e", ADMIN_USERS: "Ada Admin:admin-e2e", SESSION_SECRET: "e2e-session-secret-0123456789", ALLOW_DEMO_DATA: "true" },
+    env: { STAFF_USERS: [1, 2, 3, 4, 5, 6].map((n) => `Desk ${n}:desk-${n}-e2e`).join(","), ADMIN_USERS: "Ada Admin:admin-e2e", SESSION_SECRET: "e2e-session-secret-0123456789", ALLOW_DEMO_DATA: "true" },
   },
 });

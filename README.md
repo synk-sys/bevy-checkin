@@ -27,22 +27,22 @@ Until you set up accounts (see [Sign-in](#sign-in)), go to **`/admin/login`** an
 1. **Admin → Attendee list → Import CSV** loads your attendees (see [Importing attendees](#importing-attendees-csv)).
 2. Sign out, then sign in at **`/login`** with password **`checkin`** as a volunteer. The **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
-Volunteers pick their desk (Desk 1 to Desk 6) on the sign-in page, and the device remembers it; the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
+Volunteers don't enter a name: they pick their desk (Desk 1 to Desk 6) on the sign-in page and type that desk's password. Check-ins are recorded under the desk, and the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
 
 Admins don't scan tickets: they have their own sign-in page at **`/admin/login`** (volunteers are turned away there), aren't asked for a desk and don't get the Desk page. They see Dashboard, Attendees and Admin. An undo by an admin is recorded under **Admin**.
 
 ## Sign-in
 
-Each person signs in with their name and their own password. List them in `.env.local` (locally) or in your host's environment variables (deployed):
+Admins sign in with their name and their own password. Volunteers sign in as a desk: each of the six desks has its own password, which you give to whoever works that desk. List them in `.env.local` (locally) or in your host's environment variables (deployed):
 
 ```
 ADMIN_USERS=Kritima:long-pass-1
-STAFF_USERS=Priya:pass-2,Sam:pass-3
+STAFF_USERS=Desk 1:tulip-1,Desk 2:maple-2,Desk 3:cedar-3,Desk 4:birch-4,Desk 5:aspen-5,Desk 6:willow-6
 SESSION_SECRET=any-long-random-string
 ```
 
-- Entries are `Name:password`, separated by commas, so passwords can't contain commas.
-- Names match regardless of capitals or extra spaces. Check-ins are recorded under the name as you wrote it.
+- Entries are `Name:password`, separated by commas, so passwords can't contain commas. In `STAFF_USERS` the names must be `Desk 1` … `Desk 6`.
+- Names match regardless of capitals or extra spaces. Check-ins are recorded under the desk (or, for admins, under **Admin**).
 - Once any account is listed, the `admin` / `checkin` fallback stops working. That fallback never works on a deployed server.
 - To add, remove or change someone, edit the list and restart the server (or redeploy). A session lasts 14 hours. Removing someone from the list doesn't end a session they've already started; change `SESSION_SECRET` to sign everyone out.
 
@@ -91,7 +91,7 @@ Attendee data is stored in **Supabase** Postgres. Supabase doesn't host Next.js 
    |---|---|
    | `DATABASE_URL` | the Supabase connection string |
    | `ADMIN_USERS` | e.g. `Kritima:long-pass-1` |
-   | `STAFF_USERS` | e.g. `Priya:pass-2,Sam:pass-3` |
+   | `STAFF_USERS` | one password per desk, e.g. `Desk 1:tulip-1,Desk 2:maple-2,…,Desk 6:willow-6` |
    | `SESSION_SECRET` | any long random string (`openssl rand -base64 32`) |
    | `NEXT_PUBLIC_EVENT_NAME` | your event's name |
    | `BEVY_API_BASE_URL`, `BEVY_API_TOKEN`, `BEVY_EVENT_ID` | optional, only if you have Bevy API access |
