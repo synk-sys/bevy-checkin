@@ -9,7 +9,7 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
 - **Walk-ins:** register people who aren't in Bevy and check them in on the spot.
 - **Live dashboard:** shows arrival rate, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
 - **Attendee list:** an admin-only view with undo.
-- **Export:** after the event, admins download a CSV of everyone who checked in (in arrival order, with time, desk and volunteer), the no-shows, or everyone, from **Admin → Export**.
+- **Export:** after the event, admins download a CSV of everyone who checked in (in arrival order, with order number, ticket number and desk), the no-shows, or everyone, from **Admin → Export**.
 - **Data sources:**
   - **CSV import** of Bevy's attendee export (or any sheet with name/email/ticket columns)
   - the Bevy API, with a configurable endpoint and pagination, if Bevy grants API access

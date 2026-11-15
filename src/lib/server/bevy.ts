@@ -18,6 +18,8 @@ export interface NormalizedAttendee {
   company: string;
   title: string;
   ticketType: string;
+  /** Bevy order number; one order can hold several people's tickets. */
+  orderNumber?: string;
   checkedIn: boolean;
 }
 
@@ -77,6 +79,7 @@ export function normalizeBevyAttendee(raw: unknown): NormalizedAttendee | null {
     company: pick(raw, ["company", "company_name", "organization", "organisation", "user.company", "profile.company", "employer"]),
     title: pick(raw, ["title", "job_title", "jobTitle", "user.title", "profile.title"]),
     ticketType: pick(raw, ["ticket_type", "ticketType", "ticket.title", "ticket.name", "ticket_name", "ticket_title", "ticket", "registration_type", "ticket_class"]) || "General",
+    orderNumber: pick(raw, ["order_number", "orderNumber", "order_id", "orderId", "order.number", "order.id"]),
     checkedIn: truthy(raw, ["checked_in", "checkedIn", "is_checked_in", "checkin_time", "checked_in_at", "checkedInAt", "checkin_count", "attended", "check_in_status", "checked_in_status"]),
   };
 }

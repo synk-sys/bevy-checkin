@@ -172,7 +172,7 @@ test("admin downloads the checked-in list from the Admin page", async ({ page })
   const text = await (await import("node:fs/promises")).readFile((await download.path())!, "utf8");
   expect(text).toContain('"First Name","Last Name","Email"');
   expect(text).toContain(`"${a.firstName}","${a.lastName}"`);
-  expect(text).not.toMatch(/"No","",/); // nobody who hasn't arrived
+  expect(text).not.toContain(',"No",'); // nobody who hasn't arrived
   await expect(page.getByText("Checked-in list downloaded")).toBeVisible();
 });
 

@@ -126,25 +126,27 @@ describe("access control", () => {
 });
 
 describe("CSV export", () => {
-  it("lists checked-in attendees in arrival order with readable columns and local times", async () => {
+  it("lists checked-in attendees in arrival order with order and ticket numbers", async () => {
     const cookie = await signIn("admin");
-    const [a, b] = demoAttendees(30);
-    for (const t of [b, a]) {
-      await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: t.ticketCode } }), undefined);
+    const bevy =
+      "Order number,Ticket number,First Name,Last Name,Email,Ticket title\n" +
+      "GOOGE260000001,GOOGA261111111,Early,Bird,early@x.com,Early Bird\n" +
+      "GOOGE260000001,GOOGA261111112,Late,Comer,late@x.com,Early Bird\n" +
+      "GOOGE260000003,GOOGA261111113,No,Show,noshow@x.com,Speakers\n";
+    await importCsv(new NextRequest(BASE + "/api/admin/import", { method: "POST", body: bevy, headers: { cookie, "content-type": "text/csv" } }), undefined);
+    for (const code of ["GOOGA261111112", "GOOGA261111111"]) {
+      await checkin(req("/api/checkin", { method: "POST", cookie, body: { code }, headers: { "x-desk": "Desk 3" } }), undefined);
       await new Promise((r) => setTimeout(r, 5));
     }
-    const res = await exportCsv(req("/api/admin/export?status=in&tz=America/Toronto", { cookie }), undefined);
+    const res = await exportCsv(req("/api/admin/export?status=in", { cookie }), undefined);
     expect(res.headers.get("content-disposition")).toContain("attendees-checked-in-");
     const lines = (await res.text()).replace(/^\uFEFF/, "").trim().split("\r\n");
-    expect(lines[0]).toBe(
-      '"First Name","Last Name","Email","Company","Ticket Type","Ticket Number","Checked In","Checked In At (America/Toronto)","Desk","Checked In By","Walk-in","Badge Printed"',
-    );
-    expect(lines).toHaveLength(3); // only the two who checked in
-    expect(lines[1]).toContain(`"${b.firstName}"`); // first to arrive comes first
-    expect(lines[1]).toMatch(/"Yes","\d{4}-\d{2}-\d{2} \d{2}:\d{2}","Admin","Alex"/);
-    // An unknown time zone falls back to UTC instead of failing.
-    const utc = await exportCsv(req("/api/admin/export?status=in&tz=Not/AZone", { cookie }), undefined);
-    expect(await utc.text()).toContain("Checked In At (UTC)");
+    expect(lines).toEqual([
+      '"First Name","Last Name","Email","Company","Ticket Type","Order Number","Ticket Number","Checked In","Desk"',
+      // First to arrive comes first; admins' check-ins are recorded under "Admin".
+      '"Late","Comer","late@x.com","","Early Bird","GOOGE260000001","GOOGA261111112","Yes","Admin"',
+      '"Early","Bird","early@x.com","","Early Bird","GOOGE260000001","GOOGA261111111","Yes","Admin"',
+    ]);
   });
 });
 

@@ -8,18 +8,17 @@ function cell(v: unknown) {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
-/** "2026-11-15 09:42" in the admin's own time zone (sent by the browser), UTC otherwise. */
-function timeFormatter(tz: string | null) {
-  let zone = "UTC";
-  if (tz) {
-    try {
-      new Intl.DateTimeFormat("en-CA", { timeZone: tz });
-      zone = tz;
-    } catch {}
-  }
-  const f = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  return { zone, format: (iso: string | null) => (iso ? f.format(new Date(iso)).replace(",", "") : "") };
-}
+const COLUMNS: [string, (r: AttendeeView) => unknown][] = [
+  ["First Name", (r) => r.firstName],
+  ["Last Name", (r) => r.lastName],
+  ["Email", (r) => r.email],
+  ["Company", (r) => r.company],
+  ["Ticket Type", (r) => r.ticketType],
+  ["Order Number", (r) => r.orderNumber],
+  ["Ticket Number", (r) => r.ticketCode],
+  ["Checked In", (r) => (r.checkedIn ? "Yes" : "No")],
+  ["Desk", (r) => r.desk],
+];
 
 /**
  * Attendee list as CSV for spreadsheets: ?status=in (checked in, in arrival
@@ -28,25 +27,10 @@ function timeFormatter(tz: string | null) {
  */
 export const GET = withRole("admin", async (req) => {
   const s = req.nextUrl.searchParams.get("status");
-  const time = timeFormatter(req.nextUrl.searchParams.get("tz"));
   const rows = await (await getService()).listAll(s === "in" ? { checkedIn: true } : s === "out" ? { checkedIn: false } : {});
   if (s === "in") rows.sort((a, b) => (a.checkedInAt ?? "").localeCompare(b.checkedInAt ?? ""));
 
-  const columns: [string, (r: AttendeeView) => unknown][] = [
-    ["First Name", (r) => r.firstName],
-    ["Last Name", (r) => r.lastName],
-    ["Email", (r) => r.email],
-    ["Company", (r) => r.company],
-    ["Ticket Type", (r) => r.ticketType],
-    ["Ticket Number", (r) => r.ticketCode],
-    ["Checked In", (r) => (r.checkedIn ? "Yes" : "No")],
-    [`Checked In At (${time.zone})`, (r) => time.format(r.checkedInAt)],
-    ["Desk", (r) => r.desk],
-    ["Checked In By", (r) => r.checkedInBy],
-    ["Walk-in", (r) => (r.source === "walkin" ? "Yes" : "No")],
-    ["Badge Printed", (r) => (r.badgePrintedAt ? "Yes" : "No")],
-  ];
-  const csv = [columns.map(([h]) => cell(h)).join(","), ...rows.map((r) => columns.map(([, get]) => cell(get(r))).join(","))].join("\r\n");
+  const csv = [COLUMNS.map(([h]) => cell(h)).join(","), ...rows.map((r) => COLUMNS.map(([, get]) => cell(get(r))).join(","))].join("\r\n");
   const label = s === "in" ? "checked-in" : s === "out" ? "not-arrived" : "all";
   const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
   return new Response("﻿" + csv + "\r\n", {

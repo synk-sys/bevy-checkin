@@ -117,8 +117,7 @@ export function AdminPanel() {
           <CardHeader>
             <CardTitle>Export</CardTitle>
             <CardDescription>
-              Download a CSV of everyone who checked in, in arrival order, with the time, desk and volunteer for each. Times are in this device&apos;s
-              time zone.
+              Download a CSV of everyone who checked in, in arrival order, with their order number, ticket number and desk.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">

@@ -11,6 +11,8 @@ export interface Attendee {
   company: string;
   title: string;
   ticketType: string;
+  /** Bevy order number (from the CSV); missing on walk-ins and older imports. */
+  orderNumber?: string;
   source: AttendeeSource;
   bevyId: string | null;
   checkedIn: boolean;
@@ -37,6 +39,7 @@ export interface AttendeeView {
   company: string;
   title: string;
   ticketType: string;
+  orderNumber: string;
   source: AttendeeSource;
   checkedIn: boolean;
   checkedInAt: string | null;
