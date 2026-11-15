@@ -162,3 +162,16 @@ test("admin imports a Bevy CSV export and a volunteer checks someone from it in"
   await expect(desk.getByTestId("result")).toContainText("Welcome, Grace!");
   await desk.context().close();
 });
+
+test("admin downloads the checked-in list from the Admin page", async ({ page }) => {
+  await signIn(page, "admin");
+  const [a] = await uncheckedAttendees(page);
+  expect((await (await page.request.post("/api/checkin", { data: { code: a.ticketCode } })).json()).status).toBe("checked_in");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByTestId("export-checked-in").click()]);
+  expect(download.suggestedFilename()).toMatch(/^attendees-checked-in-.*\.csv$/);
+  const text = await (await import("node:fs/promises")).readFile((await download.path())!, "utf8");
+  expect(text).toContain('"First Name","Last Name","Email"');
+  expect(text).toContain(`"${a.firstName}","${a.lastName}"`);
+  expect(text).not.toMatch(/"No","",/); // nobody who hasn't arrived
+  await expect(page.getByText("Checked-in list downloaded")).toBeVisible();
+});

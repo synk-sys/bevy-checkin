@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CloudDownload, FileUp, Loader2, QrCode } from "lucide-react";
+import { CloudDownload, Download, FileUp, Loader2, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ApiError, api } from "@/lib/client/api";
+import { ApiError, api, downloadAttendeesCsv } from "@/lib/client/api";
 import type { EventConfig } from "@/lib/types";
 
 export function AdminPanel() {
@@ -110,6 +110,27 @@ export function AdminPanel() {
                 {busy === "bevy" ? <Loader2 className="animate-spin" /> : <CloudDownload />} Sync from Bevy API
               </Button>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Export</CardTitle>
+            <CardDescription>
+              Download a CSV of everyone who checked in, in arrival order, with the time, desk and volunteer for each. Times are in this device&apos;s
+              time zone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button onClick={() => run("export-in", async () => (await downloadAttendeesCsv("in"), "Checked-in list downloaded"))} disabled={!!busy} data-testid="export-checked-in">
+              {busy === "export-in" ? <Loader2 className="animate-spin" /> : <Download />} Checked-in attendees
+            </Button>
+            <Button variant="outline" onClick={() => run("export-out", async () => (await downloadAttendeesCsv("out"), "No-show list downloaded"))} disabled={!!busy}>
+              {busy === "export-out" ? <Loader2 className="animate-spin" /> : <Download />} Didn&apos;t arrive
+            </Button>
+            <Button variant="outline" onClick={() => run("export-all", async () => (await downloadAttendeesCsv("all"), "Full list downloaded"))} disabled={!!busy}>
+              {busy === "export-all" ? <Loader2 className="animate-spin" /> : <Download />} Everyone
+            </Button>
           </CardContent>
         </Card>
 

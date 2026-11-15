@@ -8,7 +8,8 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
 - **Badge printing:** prints a 4″ × 3″ name badge, either on demand or automatically after each check-in.
 - **Walk-ins:** register people who aren't in Bevy and check them in on the spot.
 - **Live dashboard:** shows arrival rate, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
-- **Attendee list:** an admin-only view with CSV export and undo.
+- **Attendee list:** an admin-only view with undo.
+- **Export:** after the event, admins download a CSV of everyone who checked in (in arrival order, with time, desk and volunteer), the no-shows, or everyone, from **Admin → Export**.
 - **Data sources:**
   - **CSV import** of Bevy's attendee export (or any sheet with name/email/ticket columns)
   - the Bevy API, with a configurable endpoint and pagination, if Bevy grants API access
@@ -107,8 +108,8 @@ The table has row level security turned on with no policies, so Supabase's publi
 ## Tests
 
 ```bash
-npm test                          # 33 unit/API tests
-npm run build && npm run test:e2e # 13 Playwright tests, incl. a real camera QR scan
+npm test                          # 36 unit/API tests
+npm run build && npm run test:e2e # 14 Playwright tests, incl. a real camera QR scan
 ```
 
 Both run on the in-memory store. To run them against a real Postgres, start a **throwaway** one (the tests delete its `checkin_docs` table):
@@ -130,6 +131,7 @@ The unit and API tests cover:
 
 The end-to-end tests cover:
 - importing a CSV, then checking someone from it in
+- downloading the checked-in list
 - USB-scanner entry
 - search and check-in
 - walk-ins

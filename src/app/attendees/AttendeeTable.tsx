@@ -5,7 +5,7 @@ import { Download, Printer, RefreshCw, Undo2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api, downloadAuthed } from "@/lib/client/api";
+import { api, downloadAttendeesCsv } from "@/lib/client/api";
 import { printBadge } from "@/lib/client/print";
 import { searchKey } from "@/lib/text";
 import { ticketColor, type AttendeeView } from "@/lib/types";
@@ -55,7 +55,7 @@ export function AttendeeTable() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">Attendees</h1>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => downloadAuthed(`/api/admin/export?status=${filter}`, `attendees-${filter}.csv`)}>
+          <Button variant="outline" size="sm" onClick={() => downloadAttendeesCsv(filter)}>
             <Download /> Export CSV
           </Button>
           <Button variant="ghost" size="sm" onClick={load} aria-label="Refresh">

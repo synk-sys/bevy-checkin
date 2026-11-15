@@ -125,6 +125,29 @@ describe("access control", () => {
   });
 });
 
+describe("CSV export", () => {
+  it("lists checked-in attendees in arrival order with readable columns and local times", async () => {
+    const cookie = await signIn("admin");
+    const [a, b] = demoAttendees(30);
+    for (const t of [b, a]) {
+      await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: t.ticketCode } }), undefined);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    const res = await exportCsv(req("/api/admin/export?status=in&tz=America/Toronto", { cookie }), undefined);
+    expect(res.headers.get("content-disposition")).toContain("attendees-checked-in-");
+    const lines = (await res.text()).replace(/^\uFEFF/, "").trim().split("\r\n");
+    expect(lines[0]).toBe(
+      '"First Name","Last Name","Email","Company","Ticket Type","Ticket Number","Checked In","Checked In At (America/Toronto)","Desk","Checked In By","Walk-in","Badge Printed"',
+    );
+    expect(lines).toHaveLength(3); // only the two who checked in
+    expect(lines[1]).toContain(`"${b.firstName}"`); // first to arrive comes first
+    expect(lines[1]).toMatch(/"Yes","\d{4}-\d{2}-\d{2} \d{2}:\d{2}","Admin","Alex"/);
+    // An unknown time zone falls back to UTC instead of failing.
+    const utc = await exportCsv(req("/api/admin/export?status=in&tz=Not/AZone", { cookie }), undefined);
+    expect(await utc.text()).toContain("Checked In At (UTC)");
+  });
+});
+
 describe("CSV import", () => {
   const upload = (cookie: string, csv: string) =>
     importCsv(new NextRequest(BASE + "/api/admin/import", { method: "POST", body: csv, headers: { cookie, "content-type": "text/csv" } }), undefined);

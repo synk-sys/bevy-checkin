@@ -61,3 +61,13 @@ export async function downloadAuthed(path: string, filename: string) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+/** Download the attendee CSV (status "in" = checked in, "out" = not arrived, "all"), with times in this device's time zone. */
+export function downloadAttendeesCsv(status: "in" | "out" | "all") {
+  let tz = "";
+  try {
+    tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {}
+  const label = status === "in" ? "checked-in" : status === "out" ? "not-arrived" : "all";
+  return downloadAuthed(`/api/admin/export?status=${status}&tz=${encodeURIComponent(tz)}`, `attendees-${label}-${new Date().toISOString().slice(0, 10)}.csv`);
+}
