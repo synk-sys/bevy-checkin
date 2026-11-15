@@ -140,7 +140,7 @@ export function DeskStation() {
               {sound ? <Volume2 /> : <VolumeX />}
             </Button>
             <Button variant={camera ? "default" : "outline"} onClick={() => setCamera((c) => !c)} aria-pressed={camera} data-testid="camera-toggle">
-              {camera ? <CameraOff /> : <Camera />} {camera ? "Stop camera" : "Camera scan"}
+              {camera ? <CameraOff /> : <Camera />} {camera ? "Stop camera" : "Scan QR"}
             </Button>
           </div>
         </div>

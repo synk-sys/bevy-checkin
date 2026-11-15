@@ -54,7 +54,7 @@ test("holding a ticket QR up to the camera checks the attendee in", async ({ pag
   await expect(result).toContainText(`Welcome, ${target.firstName}!`);
   // A successful check-in closes the camera, so the same QR can't be submitted again.
   await expect(page.locator("video")).toHaveCount(0);
-  await expect(page.getByTestId("camera-toggle")).toHaveText(/Camera scan/);
+  await expect(page.getByTestId("camera-toggle")).toHaveText(/Scan QR/);
   await page.waitForTimeout(1500);
   await expect(result).toHaveAttribute("data-status", "checked_in");
   // Scanning the same ticket again shows "already checked in" and closes the camera too.
