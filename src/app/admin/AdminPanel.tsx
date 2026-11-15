@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CloudDownload, Download, FileUp, Loader2, QrCode } from "lucide-react";
+import { CloudDownload, Download, FileUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,6 @@ export function AdminPanel() {
   const [bevyConfigured, setBevyConfigured] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
-  const [demoCount, setDemoCount] = useState(240);
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -166,29 +164,6 @@ export function AdminPanel() {
                 </div>
               </>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Demo data</CardTitle>
-            <CardDescription>Dummy attendees for training volunteers and rehearsing the desk. Disabled in production unless ALLOW_DEMO_DATA=true.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-end gap-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="demoCount">Attendees</Label>
-                <Input id="demoCount" type="number" min={1} max={2000} value={demoCount} onChange={(e) => setDemoCount(Number(e.target.value))} className="w-28" />
-              </div>
-              <Button onClick={() => sync({ source: "demo", count: demoCount }, "demo")} disabled={!!busy} data-testid="load-demo">
-                {busy === "demo" && <Loader2 className="animate-spin" />} Load demo attendees
-              </Button>
-            </div>
-            <Button asChild variant="outline">
-              <Link href="/admin/tickets">
-                <QrCode /> Printable test tickets (QR)
-              </Link>
-            </Button>
           </CardContent>
         </Card>
 

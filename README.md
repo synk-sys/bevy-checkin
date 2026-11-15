@@ -14,7 +14,6 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
   - **CSV import** of Bevy's attendee export (or any sheet with name/email/ticket columns)
   - the Bevy API, with a configurable endpoint and pagination, if Bevy grants API access
   - Bevy webhooks
-  - built-in **demo data** for training volunteers
 
 ## Quick start (no Supabase or Bevy needed)
 
@@ -25,9 +24,8 @@ npm run dev     # http://localhost:3000
 
 Until you set up accounts (see [Sign-in](#sign-in)), go to **`/admin/login`** and sign in with any name and password **`admin`**. Then:
 
-1. **Admin → Load demo attendees** creates 240 dummy attendees.
-2. **Admin → Printable test tickets** shows QR codes you can hold up to the camera.
-3. Sign out, then sign in at **`/login`** with password **`checkin`** as a volunteer. The **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
+1. **Admin → Attendee list → Import CSV** loads your attendees (see [Importing attendees](#importing-attendees-csv)).
+2. Sign out, then sign in at **`/login`** with password **`checkin`** as a volunteer. The **Desk** is where you scan, search, check in and print badges. **Dashboard** shows the live stats.
 
 Volunteers pick their desk (Desk 1 to Desk 6) on the sign-in page, and the device remembers it; the dashboard uses it to show which desk is busiest. They can check people in, search, print badges and register walk-ins, but can't sync, export, undo or reset.
 
