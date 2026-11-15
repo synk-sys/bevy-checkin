@@ -46,7 +46,7 @@ test.use({
 });
 
 test("holding a ticket QR up to the camera checks the attendee in", async ({ page }) => {
-  await signIn(page, "staff", "Camera Desk");
+  await signIn(page, "staff", "Desk 3");
   await resetWithDemo(page, 60);
   await page.getByTestId("camera-toggle").click();
   const result = page.getByTestId("result");

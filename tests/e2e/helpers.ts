@@ -11,7 +11,7 @@ export async function signIn(page: Page, role: "staff" | "admin", desk = "Desk 1
   // Admins use the admin sign-in page and land on the Admin page; volunteers land on the desk.
   await page.goto(role === "admin" ? "/admin/login" : "/login");
   await page.getByLabel("Your name").fill(name);
-  if (role === "staff") await page.getByLabel("Desk name").fill(desk);
+  if (role === "staff") await page.getByRole("radio", { name: desk, exact: true }).click();
   await page.getByLabel("Password").fill(role === "admin" ? "admin-e2e" : "staff-e2e");
   await page.getByRole("button", { name: "Sign in" }).click();
   if (role === "staff") {

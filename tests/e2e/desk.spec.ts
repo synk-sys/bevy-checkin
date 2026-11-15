@@ -81,9 +81,9 @@ test("dashboard updates live when another desk checks someone in", async ({ page
 
   const other = await browser.newContext();
   const deskPage = await other.newPage();
-  await signIn(deskPage, "staff", "Desk 9");
+  await signIn(deskPage, "staff", "Desk 6");
   const [a] = await uncheckedAttendees(page);
-  const res = await deskPage.request.post("/api/checkin", { data: { code: a.ticketCode }, headers: { "x-desk": "Desk 9" } });
+  const res = await deskPage.request.post("/api/checkin", { data: { code: a.ticketCode }, headers: { "x-desk": "Desk 6" } });
   expect((await res.json()).status).toBe("checked_in");
   await other.close();
 
@@ -116,7 +116,7 @@ test("admin sign-in page is labelled Admin and turns volunteers away", async ({ 
   await expect(page.getByText("Admin", { exact: true })).toBeVisible();
   await expect(page.getByText("Start your shift")).toHaveCount(0);
   await expect(page.getByText("Check-in Desk")).toHaveCount(0);
-  await expect(page.getByLabel("Desk name")).toHaveCount(0);
+  await expect(page.getByRole("radiogroup", { name: "Desk" })).toHaveCount(0);
   await page.getByLabel("Your name").fill("Sam Staff");
   await page.getByLabel("Password").fill("staff-e2e");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -136,7 +136,7 @@ test("signed-out visitors are sent to login and see no attendee data", async ({ 
 test("desk works on a phone-sized screen", async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
-  await signIn(page, "staff", "Roaming");
+  await signIn(page, "staff", "Desk 5");
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await ctx.close();
@@ -174,4 +174,17 @@ test("admin downloads the checked-in list from the Admin page", async ({ page })
   expect(text).toContain(`"${a.firstName}","${a.lastName}"`);
   expect(text).not.toMatch(/"No","",/); // nobody who hasn't arrived
   await expect(page.getByText("Checked-in list downloaded")).toBeVisible();
+});
+
+test("volunteers pick one of the six desks, and the device remembers it", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto("/login");
+  const desks = page.getByRole("radiogroup", { name: "Desk" }).getByRole("radio");
+  await expect(desks).toHaveText(["Desk 1", "Desk 2", "Desk 3", "Desk 4", "Desk 5", "Desk 6"]);
+  await expect(page.getByRole("radio", { name: "Desk 1", exact: true })).toHaveAttribute("aria-checked", "true");
+  await signIn(page, "staff", "Desk 4");
+  await expect(page.getByText("Desk 4", { exact: true })).toBeVisible();
+  await page.request.delete("/api/session");
+  await page.goto("/login");
+  await expect(page.getByRole("radio", { name: "Desk 4", exact: true })).toHaveAttribute("aria-checked", "true");
 });

@@ -13,11 +13,16 @@ export class ApiError extends Error {
 
 const DESK_KEY = "checkin:desk";
 
+/** The check-in desks volunteers choose from when they sign in. */
+export const DESKS = ["Desk 1", "Desk 2", "Desk 3", "Desk 4", "Desk 5", "Desk 6"] as const;
+
+/** This device's desk (remembered from sign-in); Desk 1 if none or no longer on the list. */
 export function getDesk(): string {
   try {
-    return localStorage.getItem(DESK_KEY) || "Desk 1";
+    const d = localStorage.getItem(DESK_KEY);
+    return d && (DESKS as readonly string[]).includes(d) ? d : DESKS[0];
   } catch {
-    return "Desk 1";
+    return DESKS[0];
   }
 }
 

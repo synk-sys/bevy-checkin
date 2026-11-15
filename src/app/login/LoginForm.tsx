@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/hooks/useSession";
-import { ApiError, api, getDesk, setDesk } from "@/lib/client/api";
+import { cn } from "@/lib/utils";
+import { ApiError, DESKS, api, getDesk, setDesk } from "@/lib/client/api";
 
 /** Same-site path to return to after sign-in ("//host" would leave the site). */
 function nextPath(raw: string | null, fallback: string) {
@@ -23,10 +24,16 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
   const params = useSearchParams();
   const next = nextPath(params.get("next"), admin ? "/admin" : "/");
   const [name, setName] = useState("");
-  const [desk, setDeskName] = useState(() => (typeof window === "undefined" ? "Desk 1" : getDesk()));
+  const [desk, setDeskName] = useState<string>(DESKS[0]);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // The desk this device used last time, read after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDeskName(getDesk());
+  }, []);
 
   useEffect(() => {
     if (!loading && session && (!admin || session.role === "admin")) router.replace(next);
@@ -36,7 +43,7 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    if (!admin) setDesk(desk.trim() || "Desk 1");
+    if (!admin) setDesk(desk);
     try {
       await api("/api/session", { method: "POST", body: JSON.stringify({ password, name: name.trim(), adminOnly: admin }) });
       await refresh();
@@ -64,11 +71,27 @@ export function LoginForm({ admin = false }: { admin?: boolean }) {
               <Input id="name" autoComplete="username" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             {!admin && (
-              <div className="space-y-2">
-                <Label htmlFor="desk">Desk name</Label>
-                <Input id="desk" required maxLength={32} value={desk} onChange={(e) => setDeskName(e.target.value)} />
+              <fieldset className="space-y-2">
+                <legend className="text-sm leading-none font-medium">Desk</legend>
+                <div role="radiogroup" aria-label="Desk" className="grid grid-cols-3 gap-2">
+                  {DESKS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      role="radio"
+                      aria-checked={desk === d}
+                      onClick={() => setDeskName(d)}
+                      className={cn(
+                        "h-11 rounded-xl border text-sm font-medium transition-colors",
+                        desk === d ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:bg-muted",
+                      )}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
                 <p className="text-xs text-muted-foreground">Shown on the dashboard so you can see which desk is busiest.</p>
-              </div>
+              </fieldset>
             )}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
