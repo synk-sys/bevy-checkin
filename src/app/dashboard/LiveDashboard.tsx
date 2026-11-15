@@ -46,15 +46,26 @@ export function LiveDashboard() {
         </p>
       </div>
 
-      <Card aria-label="Totals">
-        <CardContent className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-4">
-          <p className="w-full text-sm text-muted-foreground">Checked in</p>
-          <p className="font-display text-5xl font-bold tabular-nums" data-testid="stat-checked-in">
-            {stats.checkedIn}
-          </p>
-          <p className="text-muted-foreground">of {stats.total} registered</p>
-        </CardContent>
-      </Card>
+      <section aria-label="Totals" className="grid gap-3 sm:grid-cols-2">
+        <Card>
+          <CardContent className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-4">
+            <p className="w-full text-sm text-muted-foreground">Checked in</p>
+            <p className="font-display text-5xl font-bold tabular-nums" data-testid="stat-checked-in">
+              {stats.checkedIn}
+            </p>
+            <p className="text-muted-foreground">of {stats.total} registered</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-4">
+            <p className="w-full text-sm text-muted-foreground">Swag collected</p>
+            <p className="font-display text-5xl font-bold tabular-nums" data-testid="stat-swag">
+              {stats.swagCollected ?? 0}
+            </p>
+            <p className="text-muted-foreground">of {stats.checkedIn} checked in</p>
+          </CardContent>
+        </Card>
+      </section>
 
       <div className="h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Arrival progress">
         <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${pct}%` }} />

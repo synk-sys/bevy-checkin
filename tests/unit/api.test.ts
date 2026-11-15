@@ -11,6 +11,7 @@ import { GET as dashboard } from "@/app/api/dashboard/route";
 import { GET as exportCsv } from "@/app/api/admin/export/route";
 import { POST as sync } from "@/app/api/admin/sync/route";
 import { POST as importCsv } from "@/app/api/admin/import/route";
+import { DELETE as undoSwag, POST as collectSwag } from "@/app/api/attendees/[id]/swag/route";
 import { POST as webhook } from "@/app/api/bevy/webhook/route";
 
 const BASE = "http://localhost:3000";
@@ -146,6 +147,43 @@ describe("access control", () => {
   });
 });
 
+describe("swag", () => {
+  const swagReq = (cookie: string, id: string, method: "POST" | "DELETE" = "POST") =>
+    [req(`/api/attendees/${id}/swag`, { method, cookie }), { params: Promise.resolve({ id }) }] as const;
+
+  it("is recorded once per checked-in attendee, under the desk", async () => {
+    const cookie = await signIn("checkin", "Desk 4");
+    const a = demoAttendees(30)[5];
+    const id = (await service.lookupByCode(a.ticketCode))!.id;
+    // Not before check-in.
+    const early = await collectSwag(...swagReq(cookie, id));
+    expect(early.status).toBe(409);
+    expect((await early.json()).error.message).toContain("Check");
+    await checkin(req("/api/checkin", { method: "POST", cookie, body: { code: a.ticketCode } }), undefined);
+    const first = await (await collectSwag(...swagReq(cookie, id))).json();
+    expect(first).toMatchObject({ status: "collected", attendee: { swagDesk: "Desk 4" } });
+    expect(first.attendee.swagCollectedAt).toBeTruthy();
+    // A second tap is told it was already collected.
+    expect((await (await collectSwag(...swagReq(cookie, id))).json()).status).toBe("already");
+    expect((await service.getStats()).swagCollected).toBe(1);
+    // Undo clears it and the count.
+    expect((await (await undoSwag(...swagReq(cookie, id, "DELETE"))).json()).attendee.swagCollectedAt).toBeNull();
+    expect((await service.getStats()).swagCollected).toBe(0);
+  });
+
+  it("counts once when several desks tap at the same moment", async () => {
+    const a = (await service.lookupByCode(demoAttendees(30)[6].ticketCode))!;
+    await service.checkIn(a.id, { desk: "Desk 1", by: "Desk 1" });
+    const results = await Promise.all([1, 2, 3, 4, 5, 6].map((n) => service.collectSwag(a.id, { desk: `Desk ${n}`, by: `Desk ${n}` })));
+    expect(results.filter((r) => r.status === "collected")).toHaveLength(1);
+    expect((await service.recountStats()).swagCollected).toBe(1);
+  });
+
+  it("needs a signed-in desk", async () => {
+    expect((await collectSwag(...swagReq("", "x"))).status).toBe(401);
+  });
+});
+
 describe("CSV export", () => {
   it("lists checked-in attendees in arrival order with order and ticket numbers", async () => {
     const cookie = await signIn("admin");
@@ -163,10 +201,10 @@ describe("CSV export", () => {
     expect(res.headers.get("content-disposition")).toContain("attendees-checked-in-");
     const lines = (await res.text()).replace(/^\uFEFF/, "").trim().split("\r\n");
     expect(lines).toEqual([
-      '"First Name","Last Name","Email","Company","Ticket Type","Order Number","Ticket Number","Checked In","Desk"',
+      '"First Name","Last Name","Email","Company","Ticket Type","Order Number","Ticket Number","Checked In","Swag Collected","Desk"',
       // First to arrive comes first; admins' check-ins are recorded under "Admin".
-      '"Late","Comer","late@x.com","","Early Bird","GOOGE260000001","GOOGA261111112","Yes","Admin"',
-      '"Early","Bird","early@x.com","","Early Bird","GOOGE260000001","GOOGA261111111","Yes","Admin"',
+      '"Late","Comer","late@x.com","","Early Bird","GOOGE260000001","GOOGA261111112","Yes","No","Admin"',
+      '"Early","Bird","early@x.com","","Early Bird","GOOGE260000001","GOOGA261111111","Yes","No","Admin"',
     ]);
   });
 });

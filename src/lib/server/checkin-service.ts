@@ -10,6 +10,7 @@ import {
   type CheckinLogEntry,
   type EventConfig,
   type Stats,
+  type SwagResult,
 } from "@/lib/types";
 import type { NormalizedAttendee } from "./bevy";
 import type { Data, DocDb, WriteOp } from "./db";
@@ -35,7 +36,7 @@ const P = {
   ticket: (key: string) => `ticketIndex/${key}`,
 };
 
-const EMPTY_STATS = (): Stats => ({ total: 0, checkedIn: 0, walkins: 0, badgesPrinted: 0, byType: {}, byDesk: {}, bySlot: {} });
+const EMPTY_STATS = (): Stats => ({ total: 0, checkedIn: 0, walkins: 0, badgesPrinted: 0, swagCollected: 0, byType: {}, byDesk: {}, bySlot: {} });
 
 const iso = (d: unknown) => (d ? new Date(d as Date).toISOString() : null);
 
@@ -56,6 +57,8 @@ export function toView(a: Attendee): AttendeeView {
     checkedInBy: a.checkedInBy,
     desk: a.desk,
     badgePrintedAt: iso(a.badgePrintedAt),
+    swagCollectedAt: iso(a.swagCollectedAt),
+    swagDesk: a.swagDesk ?? null,
   };
 }
 
@@ -198,6 +201,47 @@ export class CheckinService {
         [`byType.${mapKey(res.attendee.ticketType)}.checkedIn`]: -1,
         [`byDesk.${mapKey(res.prevDesk ?? "unknown")}`]: -1,
       });
+      this.statsCache = null;
+    }
+    return toView(res.attendee);
+  }
+
+  /**
+   * Record that an attendee picked up their swag. Like check-in, the read happens
+   * inside a transaction, so if two desks tap at once only one records it and the
+   * other is told it was already collected. Only checked-in attendees get swag.
+   */
+  async collectSwag(id: string, ctx: DeskContext): Promise<SwagResult> {
+    await this.ensureInitialized();
+    const now = new Date();
+    const outcome = await this.db.runTransaction(async (tx) => {
+      const d = await tx.get(P.attendee(id));
+      if (!d) throw new CheckinError("NOT_FOUND", "Attendee not found");
+      const a = asAttendee(id, d);
+      if (!a.checkedIn) throw new CheckinError("CONFLICT", `Check ${a.firstName} in before handing out swag`);
+      if (a.swagCollectedAt) return { done: false, attendee: a };
+      tx.merge(P.attendee(id), { swagCollectedAt: now, swagDesk: ctx.desk, updatedAt: now });
+      return { done: true, attendee: { ...a, swagCollectedAt: now, swagDesk: ctx.desk, updatedAt: now } };
+    });
+    if (!outcome.done) return { status: "already", attendee: toView(outcome.attendee) };
+    await this.db.increment(P.stats, { swagCollected: 1 });
+    this.statsCache = null;
+    return { status: "collected", attendee: toView(outcome.attendee) };
+  }
+
+  /** Take back a swag pickup recorded by mistake. */
+  async undoSwag(id: string): Promise<AttendeeView> {
+    const now = new Date();
+    const res = await this.db.runTransaction(async (tx) => {
+      const d = await tx.get(P.attendee(id));
+      if (!d) throw new CheckinError("NOT_FOUND", "Attendee not found");
+      const a = asAttendee(id, d);
+      if (!a.swagCollectedAt) return { changed: false, attendee: a };
+      tx.merge(P.attendee(id), { swagCollectedAt: null, swagDesk: null, updatedAt: now });
+      return { changed: true, attendee: { ...a, swagCollectedAt: null, swagDesk: null } };
+    });
+    if (res.changed) {
+      await this.db.increment(P.stats, { swagCollected: -1 });
       this.statsCache = null;
     }
     return toView(res.attendee);
@@ -375,6 +419,7 @@ export class CheckinService {
       s.byType[t].total++;
       if (a.source === "walkin") s.walkins++;
       if (a.badgePrintedAt) s.badgesPrinted++;
+      if (a.swagCollectedAt) s.swagCollected++;
       if (a.checkedIn) {
         s.checkedIn++;
         s.byType[t].checkedIn++;

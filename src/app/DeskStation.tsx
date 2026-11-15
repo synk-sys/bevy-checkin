@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, Loader2, Search, UserPlus, Volume2, VolumeX } from "lucide-react";
+import { Camera, CameraOff, Gift, Loader2, Search, UserPlus, Volume2, VolumeX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { useSession } from "@/hooks/useSession";
 import { ApiError, api } from "@/lib/client/api";
 import { printBadge } from "@/lib/client/print";
 import { beep, unlockAudioOnFirstTouch } from "@/lib/client/sound";
-import { ticketColor, type AttendeeView, type CheckInResult, type EventConfig } from "@/lib/types";
+import { ticketColor, type AttendeeView, type CheckInResult, type EventConfig, type SwagResult } from "@/lib/types";
 
 /** Heuristic: single token with a digit/dash/slash looks like a scanned code, not a name. */
 const looksLikeCode = (s: string) => !/\s/.test(s.trim()) && /[\d\-_/:]/.test(s) && s.trim().length >= 4;
@@ -23,6 +23,7 @@ export function DeskStation() {
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [swagWarning, setSwagWarning] = useState<string | null>(null);
   const [camera, setCamera] = useState(false);
   const [walkIn, setWalkIn] = useState(false);
   const [recent, setRecent] = useState<CheckInResult[]>([]);
@@ -65,6 +66,7 @@ export function DeskStation() {
     async (body: { code: string } | { attendeeId: string }): Promise<CheckInResult | null> => {
       setBusy(true);
       setError(null);
+      setSwagWarning(null);
       try {
         const r = await api<CheckInResult>("/api/checkin", { method: "POST", body: JSON.stringify(body), allow404: true });
         show(r);
@@ -81,6 +83,38 @@ export function DeskStation() {
     },
     [show],
   );
+
+  /** Put an updated attendee back into the result banner and search results. */
+  const replaceAttendee = (a: AttendeeView) => {
+    setResult((r) => (r && r.status !== "not_found" && r.attendee.id === a.id ? { ...r, attendee: a } : r));
+    setFound((f) => ({ ...f, list: f.list.map((x) => (x.id === a.id ? a : x)) }));
+  };
+
+  // Swag: one pickup per attendee; a second tap (or another desk) is warned it was already collected.
+  const swag = async (id: string, undo = false) => {
+    setBusy(true);
+    setError(null);
+    setSwagWarning(null);
+    try {
+      if (undo) {
+        replaceAttendee((await api<{ attendee: AttendeeView }>(`/api/attendees/${id}/swag`, { method: "DELETE" })).attendee);
+      } else {
+        const r = await api<SwagResult>(`/api/attendees/${id}/swag`, { method: "POST" });
+        replaceAttendee(r.attendee);
+        beep(r.status === "collected" ? "ok" : "warn");
+        if (r.status === "already") {
+          const at = r.attendee.swagCollectedAt ? new Date(r.attendee.swagCollectedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+          setSwagWarning(`${r.attendee.firstName} already collected swag at ${at}${r.attendee.swagDesk ? ` · ${r.attendee.swagDesk}` : ""}.`);
+        }
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Couldn't record swag");
+      beep("error");
+    } finally {
+      setBusy(false);
+      refocus();
+    }
+  };
 
   // Camera scan: close the camera once the ticket is found (checked in now or already); keep it open to retry otherwise.
   const scanned = async (code: string) => {
@@ -189,7 +223,18 @@ export function DeskStation() {
                   </p>
                 </div>
                 {a.checkedIn ? (
-                  <Badge variant="warning">Checked in</Badge>
+                  <>
+                    <Badge variant="warning">Checked in</Badge>
+                    {a.swagCollectedAt ? (
+                      <Badge variant="success">
+                        <Gift className="size-3" aria-hidden="true" /> Swag collected
+                      </Badge>
+                    ) : (
+                      <Button variant="outline" onClick={() => swag(a.id)} disabled={busy} aria-label={`Swag collected for ${a.firstName} ${a.lastName}`}>
+                        <Gift /> Swag
+                      </Button>
+                    )}
+                  </>
                 ) : (
                   <Button onClick={() => checkIn({ attendeeId: a.id })} disabled={busy} aria-label={`Check in ${a.firstName} ${a.lastName}`}>
                     Check in
@@ -208,7 +253,14 @@ export function DeskStation() {
           </p>
         )}
 
-        {result && <ResultBanner result={result} onPrint={print} onWalkIn={() => setWalkIn(true)} />}
+        {result && (
+          <ResultBanner result={result} onPrint={print} onWalkIn={() => setWalkIn(true)} onSwag={(id) => swag(id)} onUndoSwag={(id) => swag(id, true)} busy={busy} />
+        )}
+        {swagWarning && (
+          <p role="alert" className="rounded-xl bg-amber-50 p-3 font-medium text-amber-900" data-testid="swag-warning">
+            {swagWarning}
+          </p>
+        )}
 
         <div className="flex justify-end">
           <Button variant="outline" onClick={() => setWalkIn(true)}>

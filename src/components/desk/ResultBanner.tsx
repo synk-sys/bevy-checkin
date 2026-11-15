@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, AlertTriangle, XCircle, Printer, UserPlus } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Gift, XCircle, Printer, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CheckInResult } from "@/lib/types";
 import { ticketColor } from "@/lib/types";
@@ -12,10 +12,16 @@ export function ResultBanner({
   result,
   onPrint,
   onWalkIn,
+  onSwag,
+  onUndoSwag,
+  busy = false,
 }: {
   result: CheckInResult;
   onPrint: (id: string) => void;
   onWalkIn: () => void;
+  onSwag?: (id: string) => void;
+  onUndoSwag?: (id: string) => void;
+  busy?: boolean;
 }) {
   if (result.status === "not_found") {
     return (
@@ -63,14 +69,33 @@ export function ResultBanner({
           </span>
           {!ok && (
             <span className="text-amber-900">
-              at {time(a.checkedInAt)} · {a.desk} · by {a.checkedInBy}
+              at {time(a.checkedInAt)} · {a.desk}
+              {a.checkedInBy && a.checkedInBy !== a.desk && ` · by ${a.checkedInBy}`}
+            </span>
+          )}
+          {a.swagCollectedAt && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-medium text-emerald-800" data-testid="swag-status">
+              <Gift className="size-3.5" aria-hidden="true" /> Swag collected {time(a.swagCollectedAt)}
+              {a.swagDesk && ` · ${a.swagDesk}`}
+              {onUndoSwag && (
+                <button type="button" className="ml-1 underline" onClick={() => onUndoSwag(a.id)} disabled={busy}>
+                  Undo
+                </button>
+              )}
             </span>
           )}
         </p>
       </div>
-      <Button size="lg" variant={ok ? "default" : "outline"} onClick={() => onPrint(a.id)} data-testid="print-badge">
-        <Printer /> {a.badgePrintedAt ? "Reprint badge" : "Print badge"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {onSwag && !a.swagCollectedAt && (
+          <Button size="lg" variant="outline" onClick={() => onSwag(a.id)} disabled={busy} data-testid="swag-button">
+            <Gift /> Swag collected
+          </Button>
+        )}
+        <Button size="lg" variant={ok ? "default" : "outline"} onClick={() => onPrint(a.id)} data-testid="print-badge">
+          <Printer /> {a.badgePrintedAt ? "Reprint badge" : "Print badge"}
+        </Button>
+      </div>
     </div>
   );
 }

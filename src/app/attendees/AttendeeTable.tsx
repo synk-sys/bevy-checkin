@@ -124,6 +124,11 @@ export function AttendeeTable() {
                   ) : (
                     <Badge variant="secondary">Not yet</Badge>
                   )}
+                  {a.swagCollectedAt && (
+                    <Badge variant="outline" className="ml-1">
+                      Swag
+                    </Badge>
+                  )}
                 </td>
                 <td className="p-3 text-right whitespace-nowrap">
                   <Button variant="ghost" size="sm" onClick={() => printBadge(a.id)} aria-label={`Print badge for ${a.firstName}`}>

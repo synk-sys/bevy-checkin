@@ -7,6 +7,7 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
 - **Safe check-in:** checking in is transaction-safe. If two desks scan the same ticket at once, only one records it and the other sees "already checked in".
 - **Badge printing:** prints a 4″ × 3″ name badge, either on demand or automatically after each check-in.
 - **Walk-ins:** register people who aren't in Bevy and check them in on the spot.
+- **Swag:** after check-in, the desk taps **Swag collected**. Each person can collect once; a second tap (from any desk) warns that it was already collected, with the time and desk. The dashboard shows the total, and the export has a Swag Collected column.
 - **Live dashboard:** shows how many have checked in, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
 - **Attendee list:** an admin-only view with undo.
 - **Export:** after the event, admins download a CSV of everyone who checked in (in arrival order, with order number, ticket number and desk), the no-shows, or everyone, from **Admin → Export**.
@@ -106,8 +107,8 @@ The table has row level security turned on with no policies, so Supabase's publi
 ## Tests
 
 ```bash
-npm test                          # 36 unit/API tests
-npm run build && npm run test:e2e # 14 Playwright tests, incl. a real camera QR scan
+npm test                          # 41 unit/API tests
+npm run build && npm run test:e2e # 17 Playwright tests, incl. a real camera QR scan
 ```
 
 Both run on the in-memory store. To run them against a real Postgres, start a **throwaway** one (the tests delete its `checkin_docs` table):

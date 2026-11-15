@@ -20,6 +20,9 @@ export interface Attendee {
   checkedInBy: string | null;
   desk: string | null;
   badgePrintedAt: Date | null;
+  /** When and at which desk the attendee picked up their swag (missing = not yet). */
+  swagCollectedAt?: Date | null;
+  swagDesk?: string | null;
   /** Check-in state last reported by Bevy (informational; local state is authoritative). */
   bevyCheckedIn: boolean;
   nameKey: string;
@@ -46,6 +49,8 @@ export interface AttendeeView {
   checkedInBy: string | null;
   desk: string | null;
   badgePrintedAt: string | null;
+  swagCollectedAt: string | null;
+  swagDesk: string | null;
 }
 
 export type CheckInResult =
@@ -64,6 +69,8 @@ export interface CheckinLogEntry {
   at: string;
 }
 
+export type SwagResult = { status: "collected" | "already"; attendee: AttendeeView };
+
 export interface EventConfig {
   eventName: string;
   autoPrintBadge: boolean;
@@ -77,6 +84,7 @@ export interface Stats {
   checkedIn: number;
   walkins: number;
   badgesPrinted: number;
+  swagCollected: number;
   byType: Record<string, { total: number; checkedIn: number }>;
   byDesk: Record<string, number>;
   /** Check-ins per 10-minute slot, keyed "YYYYMMDD-HHMM" (UTC). */

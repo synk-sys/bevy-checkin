@@ -176,7 +176,11 @@ test("admin downloads the checked-in list from the Admin page", async ({ page })
   const text = await (await import("node:fs/promises")).readFile((await download.path())!, "utf8");
   expect(text).toContain('"First Name","Last Name","Email"');
   expect(text).toContain(`"${a.firstName}","${a.lastName}"`);
-  expect(text).not.toContain(',"No",'); // nobody who hasn't arrived
+  // Nobody who hasn't arrived: every row says Yes under Checked In.
+  const [header, ...rows] = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/).map((l) => l.slice(1, -1).split('","'));
+  const col = header.indexOf("Checked In");
+  expect(rows.length).toBeGreaterThan(0);
+  for (const r of rows) expect(r[col]).toBe("Yes");
   await expect(page.getByText("Checked-in list downloaded")).toBeVisible();
 });
 
@@ -214,4 +218,29 @@ test("volunteers sign in with their desk's password, with no name, and check-ins
   await expect(page.getByTestId("result")).toHaveAttribute("data-status", "checked_in");
   const recorded = await (await page.request.get(`/api/attendees/search?q=${encodeURIComponent(a.ticketCode)}`)).json();
   expect(recorded.results[0]).toMatchObject({ desk: "Desk 2", checkedInBy: "Desk 2" });
+});
+
+test("desk marks swag collected once, and a second tap is warned", async ({ page }) => {
+  await signIn(page, "staff", "Desk 3");
+  const [a] = await uncheckedAttendees(page);
+  await page.getByTestId("scan-input").fill(a.ticketCode);
+  await page.getByTestId("scan-input").press("Enter");
+  await expect(page.getByTestId("result")).toHaveAttribute("data-status", "checked_in");
+  await page.getByTestId("swag-button").click();
+  await expect(page.getByTestId("swag-status")).toContainText("Swag collected");
+  await expect(page.getByTestId("swag-status")).toContainText("Desk 3");
+  await expect(page.getByTestId("swag-button")).toHaveCount(0);
+
+  // Scanning them again shows the swag was already collected.
+  await page.getByTestId("scan-input").fill(a.ticketCode);
+  await page.getByTestId("scan-input").press("Enter");
+  await expect(page.getByTestId("result")).toHaveAttribute("data-status", "already");
+  await expect(page.getByTestId("swag-status")).toBeVisible();
+
+  // Undo, then another desk records it first: tapping here now warns instead of counting twice.
+  await page.getByTestId("swag-status").getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByTestId("swag-button")).toBeVisible();
+  expect((await (await page.request.post(`/api/attendees/${a.id}/swag`)).json()).status).toBe("collected");
+  await page.getByTestId("swag-button").click();
+  await expect(page.getByTestId("swag-warning")).toContainText(`${a.firstName} already collected swag`);
 });
