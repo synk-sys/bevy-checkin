@@ -44,24 +44,15 @@ export function LiveDashboard() {
         </p>
       </div>
 
-      <section aria-label="Totals" className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          { label: "Checked in", value: stats.checkedIn, sub: `of ${stats.total} registered`, id: "checked-in" },
-          { label: "Arrival rate", value: `${pct}%`, sub: `${stats.total - stats.checkedIn} still to arrive`, id: "rate" },
-          { label: "Last hour", value: lastHour, sub: "check-ins", id: "last-hour" },
-          { label: "Walk-ins", value: stats.walkins, sub: `${stats.badgesPrinted} badges printed`, id: "walkins" },
-        ].map((s) => (
-          <Card key={s.id}>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-              <p className="font-display text-4xl font-bold tabular-nums" data-testid={`stat-${s.id}`}>
-                {s.value}
-              </p>
-              <p className="text-xs text-muted-foreground">{s.sub}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <Card aria-label="Totals">
+        <CardContent className="flex flex-wrap items-baseline gap-x-3 gap-y-1 p-4">
+          <p className="w-full text-sm text-muted-foreground">Checked in</p>
+          <p className="font-display text-5xl font-bold tabular-nums" data-testid="stat-checked-in">
+            {stats.checkedIn}
+          </p>
+          <p className="text-muted-foreground">of {stats.total} registered</p>
+        </CardContent>
+      </Card>
 
       <div className="h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Arrival progress">
         <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${pct}%` }} />

@@ -7,7 +7,7 @@ Event check-in for **Bevy**-managed events, such as GDG and DevFest chapters. It
 - **Safe check-in:** checking in is transaction-safe. If two desks scan the same ticket at once, only one records it and the other sees "already checked in".
 - **Badge printing:** prints a 4″ × 3″ name badge, either on demand or automatically after each check-in.
 - **Walk-ins:** register people who aren't in Bevy and check them in on the spot.
-- **Live dashboard:** shows arrival rate, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
+- **Live dashboard:** shows how many have checked in, arrivals per 10 minutes, a breakdown by ticket type and by desk, and recent activity.
 - **Attendee list:** an admin-only view with undo.
 - **Export:** after the event, admins download a CSV of everyone who checked in (in arrival order, with order number, ticket number and desk), the no-shows, or everyone, from **Admin → Export**.
 - **Data sources:**
